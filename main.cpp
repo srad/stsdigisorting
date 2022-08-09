@@ -2,6 +2,8 @@
 #include <cstring>
 #include "common.h"
 
+#include "sortblock.h"
+
 int main(int argc, char** argv) {
     try {
         std::string input;
@@ -21,6 +23,15 @@ int main(int argc, char** argv) {
 
         auto vDigis = experimental::readCsv(input, 1);
         std::cout << "CSV loaded." << "\n";
+
+        experimental::CbmStsDigi* aDigis = vDigis.data();
+        auto n = vDigis.size();
+        vDigis.clear();
+
+        experimental::CbmStsDigiBucket buckets(aDigis, n);
+        std::cout << "Buckets created." << "\n";
+
+	sortBlock();
     }
     catch (std::exception& e) {
         std::cerr << e.what() << "\n";
