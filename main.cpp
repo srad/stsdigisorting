@@ -31,7 +31,7 @@ int main(int argc, char** argv) {
         experimental::CbmStsDigiBucket buckets(aDigis, n);
         std::cout << "Buckets created." << "\n";
 
-	sortBlock();
+	blockSort();
     }
     catch (std::exception& e) {
         std::cerr << e.what() << "\n";
