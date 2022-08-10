@@ -1,4 +1,3 @@
-#include <cuda.h>
 #include <xpu/device.h>
 #include "JanSergeySort.h"
 #include "../datastructures.h"
