@@ -4,7 +4,7 @@
 #include "device_launch_parameters.h"
 #include <stdio.h>
 #include <iostream>
-#include "common.h"
+#include "../common.h"
 
 namespace experimental {
 #define DEBUG

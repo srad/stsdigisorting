@@ -2,7 +2,9 @@
 .idea
 
 xpu
-build
+build/**
+!build/run.sh
+!build/cm.sh
 
 *~
 *.a

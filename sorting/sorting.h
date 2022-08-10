@@ -25,8 +25,7 @@ namespace experimental {
 		CbmStsDigi* dev_output = 0;
 		int* dev_countAndPrefixes = 0;
 
-		try
-		{
+		try {
 			const int digiSize = digiCount * sizeof(CbmStsDigi);
 			const int bucketSize = bucketCount * sizeof(int); // startIndex, endIndex
 
