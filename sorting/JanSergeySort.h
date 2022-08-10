@@ -5,5 +5,5 @@
 #include "../datastructures.h"
 
 struct JanSergeySortKernel{};
-XPU_EXPORT_KERNEL(JanSergeySortKernel, JanSergeySort, const int, const experimental::CbmStsDigi*, const int*, const int*, experimental::CbmStsDigi*);
+XPU_EXPORT_KERNEL(JanSergeySortKernel, JanSergeySort, const size_t, const experimental::CbmStsDigi*, const int*, const int*, experimental::CbmStsDigi*);
 

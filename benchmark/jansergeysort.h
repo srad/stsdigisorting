@@ -11,15 +11,15 @@
 template<typename Kernel>
 class jansergeysort_bench : public benchmark {
 
-    const size_t n;
+    size_t n;
 
     // Big difference here is that the digis are grouped in buckets and then bucket-wise sorted.
-    experimental::CbmStsDigiBucket bucket;
+    experimental::CbmStsDigiBucket* bucket;
 
     // Write the sorted result to CSV file.
     std::ofstream output;
 
-    const experimental::CbmStsDigi* digis;
+    experimental::CbmStsDigi* digis;
     xpu::hd_buffer <experimental::CbmStsDigi> buffDigis;
     xpu::hd_buffer <experimental::CbmStsDigi> buffOutput;
 
@@ -31,7 +31,10 @@ public:
         std::copy(in_digis, in_digis + in_n, digis);
     }
 
-    ~jansergeysort_bench() { delete[] digis; }
+    ~jansergeysort_bench() {
+        delete[] digis;
+        delete bucket;
+    }
 
     std::string name() { return xpu::get_name<Kernel>(); }
 
@@ -41,16 +44,16 @@ public:
 
         output.open("jansergey_sort_output.csv", std::ios::out | std::ios::trunc);
 
-        bucket = experimental::CbmStsDigiBucket(digis, n);
+        bucket = new experimental::CbmStsDigiBucket(digis, n);
         std::cout << "Buckets created." << "\n";
 
-        buffStartIndex = xpu::hd_buffer<experimental::CbmStsDigi>(bucket.size());
-        buffEndIndex = xpu::hd_buffer<experimental::CbmStsDigi>(bucket.size());
+        buffStartIndex = xpu::hd_buffer<int>(bucket->size());
+        buffEndIndex = xpu::hd_buffer<int>(bucket->size());
 
-        std::copy(bucket.startIndex, bucket.startIndex + bucket.size(), buffStartIndex.h());
-        std::copy(bucket.endIndex, bucket.endIndex + bucket.size(), buffEndIndex.h());
+        std::copy(bucket->startIndex, bucket->startIndex + bucket->size(), buffStartIndex.h());
+        std::copy(bucket->endIndex, bucket->endIndex + bucket->size(), buffEndIndex.h());
 
-        std::copy(bucket.digis, bucket.digis + n, buffDigis.h());
+        std::copy(bucket->digis, bucket->digis + n, buffDigis.h());
     }
 
     void teardown() {
@@ -70,7 +73,8 @@ public:
     void run() {
         xpu::copy(buffDigis, xpu::host_to_device);
         // buckets.digis, buckets.size(), n, buckets.startIndex, buckets.endIndex
-        xpu::run_kernel<Kernel>(buffDigis.d(), bucket.size(), n, buffStartIndex.d(), buffEndIndex.d(), buffOutput.d());
+        // const size_t, const experimental::CbmStsDigi*, const int*, const int*, experimental::CbmStsDigi*
+        xpu::run_kernel<Kernel>(xpu::grid::n_blocks(bucket->size()), n, buffDigis.d(), buffStartIndex.d(), buffEndIndex.d(), buffOutput.d());
         xpu::copy(buffOutput, xpu::device_to_host);
     }
 

@@ -12,7 +12,7 @@ struct JanSergeySortSmem {
 
 XPU_D void prescan(JanSergeySortSmem& smem);
 
-XPU_KERNEL(JanSergeySort, JanSergeySortSmem, const int n, const experimental::CbmStsDigi* digis, const int* startIndex, const int* endIndex, experimental::CbmStsDigi* output) {
+XPU_KERNEL(JanSergeySort, JanSergeySortSmem, const size_t n, const experimental::CbmStsDigi* digis, const int* startIndex, const int* endIndex, experimental::CbmStsDigi* output) {
     const int bucketIdx = xpu::block_idx::x();
     const int bucketStartIdx = startIndex[bucketIdx];
     const int bucketEndIdx = endIndex[bucketIdx];
