@@ -1,15 +1,8 @@
+#include <cuda.h>
 #include <xpu/device.h>
 #include "JanSergeySort.h"
 #include "../datastructures.h"
 #include "../common.h"
-
-#if XPU_IS_CUDA
-#define CBM_STS_SORT_BLOCK_SIZE 32
-#define CBM_STS_SORT_ITEMS_PER_THREAD 32
-#else
-#define CBM_STS_SORT_BLOCK_SIZE 256
-#define CBM_STS_SORT_ITEMS_PER_THREAD 6
-#endif
 
 __device__ void prescan(int* countAndPrefixes);
 
