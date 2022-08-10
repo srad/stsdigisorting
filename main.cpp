@@ -10,8 +10,6 @@
 #include "sorting/JanSergeySort.h"
 
 int main(int argc, char** argv) {
-    experimental::CbmStsDigi* aDigis;
-
     try {
         // Command line paraams.
         std::string input;
@@ -36,10 +34,11 @@ int main(int argc, char** argv) {
         // Read CSV and load into raw array.
         auto vDigis = experimental::readCsv(input, repeat);
         std::cout << "CSV loaded." << "\n";
+        experimental::CbmStsDigi* aDigis = new experimental::CbmStsDigi[vDigis.size()];
 
-        aDigis = vDigis.data();
         const size_t n = vDigis.size();
-        vDigis.clear();
+        std::copy(vDigis.begin(), vDigis.end(), aDigis);
+        std::cout << "Copied array of size: " << n << "\n";
 
         // Benchmark.
         setenv("XPU_PROFILE", "1", 1); // always enable profiling in benchmark
@@ -48,21 +47,19 @@ int main(int argc, char** argv) {
 
         benchmark_runner runner;
 
-//        if (xpu::active_driver() != xpu::cpu) {
-        runner.add(new stdsort_bench(aDigis, n));
-        runner.add(new blocksort_bench<BlockSort>(aDigis, n));
-        runner.add(new jansergeysort_bench<JanSergeySort>(aDigis, n));
-        //      }
+        if (xpu::active_driver() != xpu::cpu) {
+            runner.add(new stdsort_bench(aDigis, n));
+            //runner.add(new blocksort_bench<BlockSort>(aDigis, n));
+            //runner.add(new jansergeysort_bench<JanSergeySort>(aDigis, n));
+        }
 
         runner.run(10);
+        delete[] aDigis;
     }
     catch (std::exception& e) {
-        delete[] aDigis;
         std::cerr << e.what() << "\n";
         return 1;
     }
-
-    delete[] aDigis;
 
     return 0;
 }

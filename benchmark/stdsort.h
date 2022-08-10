@@ -17,7 +17,7 @@ class stdsort_bench : public benchmark {
     std::vector<float> executionTimeMs;
 
 public:
-    stdsort_bench(const experimental::CbmStsDigi* in_digis, const size_t in_n) : n(in_n) {
+    stdsort_bench(const experimental::CbmStsDigi* in_digis, const size_t in_n) : n(in_n), digis(new experimental::CbmStsDigi[in_n]) {
         std::copy(in_digis, in_digis + n, digis);
     }
 
