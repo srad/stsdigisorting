@@ -24,9 +24,6 @@ namespace experimental {
         CbmStsDigi() = default;
         CbmStsDigi(int in_address, int in_system, int in_unit, int in_ladder, int in_half_ladder, int in_module, int in_sensor, int in_side, int in_channel, int in_time) : address(in_address), system(in_system), unit(in_unit), ladder(in_ladder), half_ladder(in_half_ladder), module(in_module), sensor(in_sensor), side(in_side), channel(in_channel), time(in_time) {}
 
-        bool operator==(const CbmStsDigi& d) { return channel == d.channel && time == d.time; }
-        bool operator<(const CbmStsDigi& d) { return channel < d.channel && time < d.time; }
-
         std::string to_string() { return "(address: " + to_zero_lead(address, 10) + ", channel: " + to_zero_lead(channel, 4) + ", time: " + to_zero_lead(time, 5) + ")"; }
 
     private:
@@ -58,16 +55,21 @@ namespace experimental {
         int bucketCount_;
 
     public:
+        // Contains after construction the bucket with digis.
         CbmStsDigi* digis;
+
+        // Start and end indexes (not size) of digis.
         int* startIndex;
         int* endIndex;
 
-        CbmStsDigiBucket(CbmStsDigi* in_digis, size_t in_n) : input(in_digis), n_(in_n), digis(new CbmStsDigi[in_n]) {
+        CbmStsDigiBucket(const CbmStsDigi* in_digis, const size_t in_n) : n_(in_n), digis(new CbmStsDigi[in_n]), input(new CbmStsDigi[in_n]) {
+            std::copy(in_digis, in_digis + in_n, input);
             createBuckets();
         }
         
         ~CbmStsDigiBucket() {
             delete[] digis;
+            delete[] input;
             delete[] startIndex;
             delete[] endIndex;
             delete[] addresses_;

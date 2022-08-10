@@ -4,11 +4,16 @@
 
 #include "benchmark/blocksort.h"
 #include "benchmark/stdsort.h"
+#include "benchmark/jansergeysort.h"
 
 #include "sorting/SortKernel.h"
+#include "sorting/JanSergeySort.h"
 
 int main(int argc, char** argv) {
+    experimental::CbmStsDigi* aDigis;
+
     try {
+        // Command line paraams.
         std::string input;
         std::string output;
         int repeat = 1;
@@ -28,17 +33,15 @@ int main(int argc, char** argv) {
 
         if (input == "") throw std::invalid_argument("Input digis input file missing");
 
+        // Read CSV and load into raw array.
         auto vDigis = experimental::readCsv(input, repeat);
         std::cout << "CSV loaded." << "\n";
 
-        experimental::CbmStsDigi* aDigis = vDigis.data();
-        auto n = vDigis.size();
+        aDigis = vDigis.data();
+        const size_t n = vDigis.size();
         vDigis.clear();
 
-        experimental::CbmStsDigiBucket buckets(aDigis, n);
-        std::cout << "Buckets created." << "\n";
-
-	// Benchmark
+        // Benchmark.
         setenv("XPU_PROFILE", "1", 1); // always enable profiling in benchmark
 
         xpu::initialize();
@@ -48,15 +51,18 @@ int main(int argc, char** argv) {
 //        if (xpu::active_driver() != xpu::cpu) {
             runner.add(new stdsort_bench(aDigis, n));
             runner.add(new blocksort_bench<BlockSort>(aDigis, n));
-
+            runner.add(new jansergeysort_bench<JanSergeySort>(aDigis, n));
   //      }
 
         runner.run(10);
     }
     catch (std::exception& e) {
+        delete[] aDigis;
         std::cerr << e.what() << "\n";
         return 1;
     }
+
+    delete[] aDigis;
 
     return 0;
 }
