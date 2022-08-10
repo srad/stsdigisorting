@@ -9,6 +9,9 @@ add_subdirectory(lib/xpu)
 add_library(SortKernel SHARED sorting/SortKernel.cpp)
 xpu_attach(SortKernel sorting/SortKernel.cpp)
 
+add_library(JanSergeySort SHARED sorting/JanSergeySort.cpp)
+xpu_attach(JanSergeySort sorting/JanSergeySort.cpp)
+
 # add the executable
 add_executable(stsdigisort main.cpp)
-target_link_libraries(stsdigisort xpu SortKernel)
+target_link_libraries(stsdigisort xpu SortKernel JanSergeySort)
