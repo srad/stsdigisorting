@@ -34,9 +34,9 @@ public:
     void teardown() {
         check();
 
-	output << "index,address,channel,time\n";
+        output << "index,address,channel,time\n";
 
-        for (int i=0; i < n; i++) {
+        for (int i = 0; i < n; i++) {
             output << i << "," << digis[i].address << "," << digis[i].channel << "," << digis[i].time << "\n";
         }
 
@@ -51,7 +51,7 @@ public:
             return (((unsigned long int) a.channel) << 32 | (unsigned long int) (a.time)) < (((unsigned long int) b.channel) << 32 | (unsigned long int) (b.time));
         });
         auto done = std::chrono::high_resolution_clock::now();
-        executionTimeMs.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(done-started).count());
+        executionTimeMs.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(done - started).count());
     }
 
     void check() {
@@ -59,18 +59,18 @@ public:
         bool ok = true;
 
         // Start at second digi.
-        for (int i=1; i < n; i++) {
-             ok &= digis[i].channel >= digis[i-1].channel;
+        for (int i = 1; i < n; i++) {
+            ok &= digis[i].channel >= digis[i - 1].channel;
 
             // Only check the time_j < time_j-1 within the same channels.
-            if (digis[i].channel == digis[i-1].channel) {
-                auto faa = (digis[i].time >= digis[i-1].time);
+            if (digis[i].channel == digis[i - 1].channel) {
+                auto faa = (digis[i].time >= digis[i - 1].time);
                 ok &= faa;
             }
 
             if (!ok) {
                 std::cout << "Error: " << "\n";
-                printf("i: %d: (%d, %d, %d)\n", i, digis[i-1].address, digis[i-1].channel, digis[i-1].time);
+                printf("i: %d: (%d, %d, %d)\n", i, digis[i - 1].address, digis[i - 1].channel, digis[i - 1].time);
                 printf("i: %d: (%d, %d, %d)\n", i, digis[i].address, digis[i].channel, digis[i].time);
                 return;
             }
@@ -84,6 +84,7 @@ public:
     }
 
     size_t bytes() { return n * sizeof(experimental::CbmStsDigi); }
+
     std::vector<float> timings() { return executionTimeMs; }
 
 };

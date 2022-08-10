@@ -13,13 +13,13 @@ namespace experimental {
 
     constexpr int channelCount = 2048;
 
-    std::vector<CbmStsDigi> readCsv(const std::string filename, const unsigned int repeat = 1) {
+    std::vector <CbmStsDigi> readCsv(const std::string filename, const unsigned int repeat = 1) {
         std::ifstream csv(filename);
         if (!csv.is_open()) {
             throw std::runtime_error("File: " + filename + " not found");
         }
 
-        std::vector<CbmStsDigi> vDigis;
+        std::vector <CbmStsDigi> vDigis;
 
         std::string line;
 
@@ -32,7 +32,8 @@ namespace experimental {
 
                 while (ss.good()) {
                     std::string substr;
-                    std:getline(ss, substr, ',');
+                    std:
+                    getline(ss, substr, ',');
                     cols.push_back(std::stoi(substr));
                 }
 

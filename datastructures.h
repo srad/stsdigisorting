@@ -16,12 +16,13 @@ namespace experimental {
         int half_ladder;
         int module;
         int sensor;
-        int side; // aufteilung in doppelte blockzahl und vorder/rückseite getrennt bearbeiten
-        // alle channels >= 1024 sind die rückseite. -> blocks verdoppeln
+        int side; // aufteilung in doppelte blockzahl und vorder/rï¿½ckseite getrennt bearbeiten
+        // alle channels >= 1024 sind die rï¿½ckseite. -> blocks verdoppeln
         int channel;
         int time;
 
         CbmStsDigi() = default;
+
         CbmStsDigi(int in_address, int in_system, int in_unit, int in_ladder, int in_half_ladder, int in_module, int in_sensor, int in_side, int in_channel, int in_time) : address(in_address), system(in_system), unit(in_unit), ladder(in_ladder), half_ladder(in_half_ladder), module(in_module), sensor(in_sensor), side(in_side), channel(in_channel), time(in_time) {}
 
         std::string to_string() { return "(address: " + to_zero_lead(address, 10) + ", channel: " + to_zero_lead(channel, 4) + ", time: " + to_zero_lead(time, 5) + ")"; }
@@ -66,7 +67,7 @@ namespace experimental {
             std::copy(in_digis, in_digis + in_n, input);
             createBuckets();
         }
-        
+
         ~CbmStsDigiBucket() {
             delete[] digis;
             delete[] input;
@@ -78,12 +79,15 @@ namespace experimental {
         CbmStsDigi& operator[](int i) { return digis[i]; }
 
         int size() const { return bucketCount_; }
+
         size_t n() const { return n_; }
 
-        int* address() const { return addresses_;  }
+        int* address() const { return addresses_; }
+
         int getAddress(const int i) const { return addresses_[i]; }
 
         int begin(const int i) const { return startIndex[i]; }
+
         int end(const int i) const { return endIndex[i]; }
 
         std::string to_index_string(int i) { return "(address: " + std::to_string(addresses_[i]) + ", start-idx: " + std::to_string(startIndex[i]) + ", end-idx:" + std::to_string(endIndex[i]) + ")"; }

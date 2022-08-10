@@ -19,12 +19,12 @@ class blocksort_bench : public benchmark {
     std::ofstream output;
 
     experimental::CbmStsDigi* digis;
-    xpu::hd_buffer<experimental::CbmStsDigi> a;
-    xpu::hd_buffer<experimental::CbmStsDigi> b;
+    xpu::hd_buffer <experimental::CbmStsDigi> a;
+    xpu::hd_buffer <experimental::CbmStsDigi> b;
     xpu::hd_buffer<experimental::CbmStsDigi*> dst;
 
 public:
-    blocksort_bench(experimental::CbmStsDigi* in_digis, size_t in_n) : digis(in_digis), n(in_n), n_blocks(in_n/elems_per_block) {}
+    blocksort_bench(experimental::CbmStsDigi* in_digis, size_t in_n) : digis(in_digis), n(in_n), n_blocks(in_n / elems_per_block) {}
 
     std::string name() { return xpu::get_name<Kernel>(); }
 
@@ -41,12 +41,12 @@ public:
     void teardown() {
         check();
 
-	output << "index,address,channel,time\n";
+        output << "index,address,channel,time\n";
 
-        int k=0;
-        for (int i=0; i < n_blocks; i++) {
-            for (int j=0; j < elems_per_block; j++) {
-		output << k++ << "," << dst.h()[i][j].address << "," << dst.h()[i][j].channel << "," << dst.h()[i][j].time << "\n";
+        int k = 0;
+        for (int i = 0; i < n_blocks; i++) {
+            for (int j = 0; j < elems_per_block; j++) {
+                output << k++ << "," << dst.h()[i][j].address << "," << dst.h()[i][j].channel << "," << dst.h()[i][j].time << "\n";
             }
         }
 
@@ -66,26 +66,26 @@ public:
         // Check if data is sorted.
         bool ok = true;
 
-        int k=0;
-        for (int i=0; i < n_blocks; i++) {
+        int k = 0;
+        for (int i = 0; i < n_blocks; i++) {
             // Offset 1 and compare the i-th element with the i-1-th element.
-            for (int j=1; j < elems_per_block && k < n; j++, k++) {
+            for (int j = 1; j < elems_per_block && k < n; j++, k++) {
                 bool okThisRun = true;
 
                 // Digi i has always a >= bigger channel number after sorting than digi i-1.
-                ok &= dst.h()[i][j].channel >= dst.h()[i][j-1].channel;
-                okThisRun &= dst.h()[i][j].channel >= dst.h()[i][j-1].channel;
+                ok &= dst.h()[i][j].channel >= dst.h()[i][j - 1].channel;
+                okThisRun &= dst.h()[i][j].channel >= dst.h()[i][j - 1].channel;
 
                 // Only check the time_j < time_j-1 within the same channels.
-                if (dst.h()[i][j].channel == dst.h()[i][j-1].channel) {
-                    auto faa = (dst.h()[i][j].time >= dst.h()[i][j-1].time);
+                if (dst.h()[i][j].channel == dst.h()[i][j - 1].channel) {
+                    auto faa = (dst.h()[i][j].time >= dst.h()[i][j - 1].time);
                     ok &= faa;
-                    okThisRun &= (dst.h()[i][j].time >= dst.h()[i][j-1].time);
+                    okThisRun &= (dst.h()[i][j].time >= dst.h()[i][j - 1].time);
                 }
 
                 if (!okThisRun) {
                     std::cout << "Error: " << "\n";
-                    printf("k: %d/%d, i: %d, j-1: %d: (%d, %d, %d)\n", k, n, i, j-1, dst.h()[i][j-1].address, dst.h()[i][j-1].channel, dst.h()[i][j-1].time);
+                    printf("k: %d/%d, i: %d, j-1: %d: (%d, %d, %d)\n", k, n, i, j - 1, dst.h()[i][j - 1].address, dst.h()[i][j - 1].channel, dst.h()[i][j - 1].time);
                     printf("k: %d/%d, i: %d, j:   %d: (%d, %d, %d)\n", k, n, i, j, dst.h()[i][j].address, dst.h()[i][j].channel, dst.h()[i][j].time);
                 }
             }
@@ -99,6 +99,7 @@ public:
     }
 
     size_t bytes() { return n * sizeof(experimental::CbmStsDigi); }
+
     std::vector<float> timings() { return xpu::get_timing<Kernel>(); }
 
 };

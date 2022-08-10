@@ -17,7 +17,9 @@ public:
     virtual void setup() = 0;
     virtual void teardown() = 0;
     virtual void run() = 0;
+
     virtual size_t bytes() { return 0; }
+
     virtual std::vector<float> timings() = 0;
 
 };
@@ -25,10 +27,10 @@ public:
 class benchmark_runner {
 
 public:
-    void add(benchmark *b) { benchmarks.emplace_back(b); }
+    void add(benchmark* b) { benchmarks.emplace_back(b); }
 
     void run(int n) {
-        for (auto &b : benchmarks) {
+        for (auto& b: benchmarks) {
             run_benchmark(b.get(), n);
         }
 
@@ -37,15 +39,15 @@ public:
         print_entry("Max");
         print_entry("Median");
         std::cout << std::endl;
-        for (auto &b : benchmarks) {
+        for (auto& b: benchmarks) {
             print_results(b.get());
         }
     }
 
 private:
-    std::vector<std::unique_ptr<benchmark>> benchmarks;
+    std::vector <std::unique_ptr<benchmark>> benchmarks;
 
-    void run_benchmark(benchmark *b, int r) {
+    void run_benchmark(benchmark* b, int r) {
         std::cout << "Running benchmark '" << b->name() << "'" << std::endl;
         b->setup();
 
@@ -56,7 +58,7 @@ private:
         b->teardown();
     }
 
-    void print_results(benchmark *b) {
+    void print_results(benchmark* b) {
         std::vector<float> timings = b->timings();
         size_t bytes = b->bytes();
 

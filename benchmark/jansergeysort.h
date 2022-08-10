@@ -20,8 +20,8 @@ class jansergeysort_bench : public benchmark {
     std::ofstream output;
 
     const experimental::CbmStsDigi* digis;
-    xpu::hd_buffer<experimental::CbmStsDigi> buffDigis;
-    xpu::hd_buffer<experimental::CbmStsDigi> buffOutput;
+    xpu::hd_buffer <experimental::CbmStsDigi> buffDigis;
+    xpu::hd_buffer <experimental::CbmStsDigi> buffOutput;
 
     xpu::hd_buffer<int> buffStartIndex;
     xpu::hd_buffer<int> buffEndIndex;
@@ -31,7 +31,7 @@ public:
         std::copy(in_digis, in_digis + in_n, digis);
     }
 
-   ~jansergeysort_bench() { delete[] digis; }
+    ~jansergeysort_bench() { delete[] digis; }
 
     std::string name() { return xpu::get_name<Kernel>(); }
 
@@ -47,7 +47,6 @@ public:
         buffStartIndex = xpu::hd_buffer<experimental::CbmStsDigi>(bucket.size());
         buffEndIndex = xpu::hd_buffer<experimental::CbmStsDigi>(bucket.size());
 
-
         std::copy(bucket.startIndex, bucket.startIndex + bucket.size(), buffStartIndex.h());
         std::copy(bucket.endIndex, bucket.endIndex + bucket.size(), buffEndIndex.h());
 
@@ -57,9 +56,9 @@ public:
     void teardown() {
         check();
 
-	output << "index,address,channel,time\n";
+        output << "index,address,channel,time\n";
 
-        for (int i=0; i < n; i++) {
+        for (int i = 0; i < n; i++) {
             output << i << "," << buffOutput.h()[i].address << "," << buffOutput.h()[i].channel << "," << buffOutput.h()[i].time << "\n";
         }
 
@@ -71,7 +70,7 @@ public:
     void run() {
         xpu::copy(buffDigis, xpu::host_to_device);
         // buckets.digis, buckets.size(), n, buckets.startIndex, buckets.endIndex
-        xpu::run_kernel<Kernel>(n, buffDigis.d(), bucket.size(), buffStartIndex.d(), buffEndIndex.d(), buffOutput.d());
+        xpu::run_kernel<Kernel>(buffDigis.d(), bucket.size(), n, buffStartIndex.d(), buffEndIndex.d(), buffOutput.d());
         xpu::copy(buffOutput, xpu::device_to_host);
     }
 
@@ -80,7 +79,7 @@ public:
         bool ok = true;
 
         // Start at second element and compare to previous for all i.
-        for (int i=1; i < n; i++) {
+        for (int i = 1; i < n; i++) {
             bool okThisRun = true;
 
             const auto& curr = buffOutput.h()[i];
@@ -112,6 +111,7 @@ public:
     }
 
     size_t bytes() { return n * sizeof(experimental::CbmStsDigi); }
+
     std::vector<float> timings() { return xpu::get_timing<Kernel>(); }
 
 };
