@@ -49,8 +49,8 @@ int main(int argc, char** argv) {
 
         if (xpu::active_driver() != xpu::cpu) {
             runner.add(new stdsort_bench(aDigis, n));
-            //runner.add(new blocksort_bench<BlockSort>(aDigis, n));
-            //runner.add(new jansergeysort_bench<JanSergeySort>(aDigis, n));
+            runner.add(new blocksort_bench<BlockSort>(aDigis, n));
+            runner.add(new jansergeysort_bench<JanSergeySort>(aDigis, n));
         }
 
         runner.run(10);

@@ -12,7 +12,7 @@
 class stdsort_bench : public benchmark {
 
     const size_t n;
-    std::ofstream output;
+    std::ofstream file;
     experimental::CbmStsDigi* digis;
     experimental::CbmStsDigi* output;
     std::vector<float> executionTimeMs;
@@ -30,19 +30,19 @@ public:
     std::string name() { return "std::sort"; }
 
     void setup() {
-        output.open("std_sort_output.csv", std::ios::out | std::ios::trunc);
+        file.open("std_sort_output.csv", std::ios::out | std::ios::trunc);
     }
 
     void teardown() {
         check();
 
-        output << "index,address,channel,time\n";
+        file << "index,address,channel,time\n";
 
         for (int i = 0; i < n; i++) {
-            output << i << "," << output[i].address << "," << output[i].channel << "," << output[i].time << "\n";
+            file << i << "," << output[i].address << "," << output[i].channel << "," << output[i].time << "\n";
         }
 
-        output.close();
+        file.close();
     }
 
     void run() {
