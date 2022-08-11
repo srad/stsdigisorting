@@ -1,3 +1,5 @@
+#pragma once
+
 #include "../datastructures.h"
 
 // Include host functions to control the GPU.
@@ -17,48 +19,51 @@ class blocksort_bench : public benchmark {
     // Write the sorted result to CSV file.
     std::ofstream output;
 
+    // This is an internal copy of the unsorted digis
+    // which is copied to run the sort benchmark repeatedly.
     experimental::CbmStsDigi* digis;
-    experimental::CbmStsDigi* sorted;
 
-    xpu::hd_buffer <experimental::CbmStsDigi> buffInput;
-    xpu::d_buffer <experimental::CbmStsDigi> buffTemp;
-    xpu::hd_buffer <experimental::CbmStsDigi*> buffOutput;
+    // All device allocations.
+    experimental::CbmStsDigi* inputD;
+    experimental::CbmStsDigi* bufD;
+    experimental::CbmStsDigi** outD;
+
+    experimental::CbmStsDigi* itemsH;
 
 public:
-    blocksort_bench(const experimental::CbmStsDigi* in_digis, const size_t in_n) : n(in_n), elems_per_block(ceil((double)in_n/n_blocks)), sorted(new experimental::CbmStsDigi[in_n]) {
+    blocksort_bench(const experimental::CbmStsDigi* in_digis, const size_t in_n) : n(in_n), elems_per_block(floor((double)in_n/n_blocks)), itemsH(new experimental::CbmStsDigi[in_n]) {
         // Create an internal copy of the digis.
         std::copy(in_digis, in_digis + in_n, digis);
-        printf("n: %lu, n_blocks: %lu, elems_per_block: %lu\n", n, n_blocks, elems_per_block);
     }
 
-    ~blocksort_bench() {
-        delete[] digis;
-        delete[] sorted;
-    }
+    ~blocksort_bench() {}
 
     std::string name() { return xpu::get_name<Kernel>(); }
 
     void setup() {
-        buffInput = xpu::hd_buffer<experimental::CbmStsDigi>(n);
-        buffTemp = xpu::d_buffer<experimental::CbmStsDigi>(n);
-        buffOutput = xpu::hd_buffer<experimental::CbmStsDigi*>(n_blocks);
-
-        output.open("block_sort_output.csv", std::ios::out | std::ios::trunc);
-        printf("block_sort: n=%lu, n_blocks=%lu, elems_per_block=%lu\n", n, n_blocks, elems_per_block);
+        std::cout << "n=" << n << ", n_blocks=" << n_blocks << ", elems_per_block=" << elems_per_block << "\n";
+        inputD = xpu::device_malloc<experimental::CbmStsDigi>(n);
+        bufD = xpu::device_malloc<experimental::CbmStsDigi>(n);
+        outD = xpu::device_malloc<experimental::CbmStsDigi*>(1);
     }
 
     void run() {
-        std::copy(digis, digis + n, buffInput.h());
-        xpu::copy(buffInput, xpu::host_to_device);
+        // Copy a fresh copy over itemsH to sort again.
+        std::copy(digis, digis + n, itemsH);
 
-        xpu::run_kernel<Kernel>(xpu::grid::n_blocks(n_blocks), buffInput.d(), buffTemp.d(), buffOutput.d(), n);
+        // Copy data from host to GPU.
+        xpu::copy(inputD, itemsH, n);
 
-        // Sorting completed, result written block-wise into this array.
-        xpu::copy(buffOutput, xpu::device_to_host);
+        xpu::run_kernel<Kernel>(xpu::grid::n_blocks(n_blocks), inputD, bufD, outD, n);
+
+        // Get the buffer that contains the sorted data.
+        experimental::CbmStsDigi* outH = nullptr;
+        xpu::copy(&outH, outD, 1);
+
+        // Copy to back host.
+        xpu::copy(itemsH, outH, n);
 
         /*
-        std::copy(buffInput.h(), buffOutput.h()[0]);
-
         size_t k=0;
         // Copy block-wise the sorted results to the flat array "sorted".
         for (int i=0; i < n_blocks; i++) {
@@ -72,8 +77,24 @@ public:
     }
 
     void teardown() {
+        delete[] digis;
+        delete[] itemsH;
+        xpu::free(inputD);
+        xpu::free(bufD);
+        xpu::free(outD);
         //check();
         /*
+
+    bool ok = true;
+    for (size_t block = 0; block < n_blocks; block++) {
+        size_t offset = block * elems_per_block;
+        for (size_t i = 1; i < elems_per_block; i++) {
+            auto faa = (itemsH[offset+i-1].key <= itemsH[offset+i].key);
+            ok &= faa;
+        }
+    }
+
+        output.open("block_sort_output.csv", std::ios::out | std::ios::trunc);
         output << "index,address,channel,time\n";
 
         int k = 0;
@@ -83,10 +104,6 @@ public:
             }
         }
         */
-        output.close();
-        buffInput.reset();
-        buffTemp.reset();
-        buffOutput.reset();
     }
 
     void check() {
@@ -96,8 +113,8 @@ public:
         size_t k=0;
         for (size_t i = 0; i < n; i++) {
             bool okThisRun = true;
-            const auto& curr = sorted[i];
-            const auto& prev = sorted[i - 1];
+            const auto& curr = itemsH[i];
+            const auto& prev = itemsH[i - 1];
 
             // Only check the time_j < time_j-1 within the same channels.
             if (curr.address == prev.address) {

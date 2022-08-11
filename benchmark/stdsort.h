@@ -1,3 +1,5 @@
+#pragma once
+
 #include "../datastructures.h"
 
 // Include host functions to control the GPU.

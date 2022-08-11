@@ -6,6 +6,7 @@
 #include "benchmark/blocksort.h"
 #include "benchmark/stdsort.h"
 #include "benchmark/jansergeysort.h"
+//#include "benchmark/jansergeysort_hip.h"
 
 #include "sorting/SortKernel.h"
 #include "sorting/JanSergeySort.h"
@@ -30,7 +31,8 @@ int main(int argc, char** argv) {
                 std::cout << "Repeat: " << repeat << "\n";
             } else if (strcmp(argv[i], "-n") == 0) {
                 // Caps the data size by some integer n.
-                max_n = std::stoi(argv[i + 1]);
+                // n is powers of 10.
+                max_n = std::pow(10, std::stoi(argv[i + 1]));
                 std::cout << "n: " << max_n << "\n";
             }
         }
@@ -58,7 +60,7 @@ int main(int argc, char** argv) {
 
         if (xpu::active_driver() != xpu::cpu) {
             std::cout << "Using GPU.\n\n";
-            runner.add(new blocksort_bench<BlockSort>(aDigis, n));
+            //runner.add(new blocksort_bench<BlockSort>(aDigis, n));
             runner.add(new jansergeysort_bench<JanSergeySort>(aDigis, n));
         } else {
             std::cout << "No GPU driver found.\n\n";
