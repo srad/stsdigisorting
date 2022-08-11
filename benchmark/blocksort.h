@@ -2,17 +2,16 @@
 
 // Include host functions to control the GPU.
 #include <xpu/host.h>
-#include "../benchmark/benchmark.h"
+#include "benchmark.h"
 
 #include <iostream>
-#include <random>
 #include <vector>
 
 template<typename Kernel>
 class blocksort_bench : public benchmark {
 
     const size_t n;
-    const size_t elems_per_block = 32 * 32 * 200;
+    const size_t elems_per_block; //= 32 * 32 * 200;
     const size_t n_blocks;
 
     // Write the sorted result to CSV file.
@@ -24,7 +23,7 @@ class blocksort_bench : public benchmark {
     xpu::hd_buffer<experimental::CbmStsDigi*> dst;
 
 public:
-    blocksort_bench(experimental::CbmStsDigi* in_digis, size_t in_n) : digis(in_digis), n(in_n), n_blocks(in_n / elems_per_block) {}
+    blocksort_bench(experimental::CbmStsDigi* in_digis, size_t in_n) : digis(in_digis), n(in_n), n_blocks(64), elems_per_block(ceil((double)in_n/64)) {}
 
     std::string name() { return xpu::get_name<Kernel>(); }
 
@@ -72,21 +71,23 @@ public:
             for (size_t j = 1; j < elems_per_block && k < n; j++, k++) {
                 bool okThisRun = true;
 
-                // Digi i has always a >= bigger channel number after sorting than digi i-1.
-                ok &= dst.h()[i][j].channel >= dst.h()[i][j - 1].channel;
-                okThisRun &= dst.h()[i][j].channel >= dst.h()[i][j - 1].channel;
+                const auto& curr = dst.h()[i][j];
+                const auto& prev = dst.h()[i][j-1];
 
                 // Only check the time_j < time_j-1 within the same channels.
-                if (dst.h()[i][j].channel == dst.h()[i][j - 1].channel) {
-                    auto faa = (dst.h()[i][j].time >= dst.h()[i][j - 1].time);
-                    ok &= faa;
-                    okThisRun &= (dst.h()[i][j].time >= dst.h()[i][j - 1].time);
+                if (curr.address == prev.address) {
+                    ok &= curr.channel >= prev.channel;
+                    okThisRun &= curr.channel >= prev.channel;
+                }
+                if (curr.channel == prev.channel) {
+                    ok &= curr.time >= prev.time;
+                    okThisRun &= curr.time >= prev.time;
                 }
 
                 if (!okThisRun) {
-                    std::cout << "Error: " << "\n";
-                    printf("(%lu/%lu) (i: %lu, j-1: %lu): (%d, %d, %d)\n", k, n, i, j - 1, dst.h()[i][j - 1].address, dst.h()[i][j - 1].channel, dst.h()[i][j - 1].time);
-                    printf("(%lu/%lu) (i: %lu, j  : %lu): (%d, %d, %d)\n", k, n, i, j, dst.h()[i][j].address, dst.h()[i][j].channel, dst.h()[i][j].time);
+                    std::cout << "BlockSort Error: " << "\n";
+                    printf("(%lu/%lu) (i: %lu, j-1: %lu): (%d, %d, %d)\n", k, n, i, j - 1, prev.address, prev.channel, prev.time);
+                    printf("(%lu/%lu) (i: %lu, j  : %lu): (%d, %d, %d)\n", k, n, i, j, curr.address, curr.channel, curr.time);
                 }
             }
         }

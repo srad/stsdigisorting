@@ -6,8 +6,8 @@
 XPU_IMAGE(JanSergeySortKernel);
 
 struct JanSergeySortSmem {
-    int countAndPrefixes[experimental::channelCount];
-    int temp[experimental::channelCount];
+    unsigned int countAndPrefixes[experimental::channelCount];
+    //unsigned int temp[experimental::channelCount];
 };
 
 XPU_D void prescan(JanSergeySortSmem& smem);
@@ -33,7 +33,18 @@ XPU_KERNEL(JanSergeySort, JanSergeySortSmem, const size_t n, const experimental:
     xpu::barrier();
 
     // 3. Prefix sum computation, TODO: replace by cub: https://nvlabs.github.io/cub/structcub_1_1_device_scan.html
-    prescan(smem);
+    //prescan(smem);
+
+    // This computation is so small and not dependent on the input, that it might not even be worth optimising.
+    // It is of length 2048 for each block and traverses the array linearly without addition space.
+    if (xpu::thread_idx::x() == 0) {
+        unsigned int sum = 0;
+        for (int i = 0; i < experimental::channelCount; i++) {
+            const auto tmp = smem.countAndPrefixes[i];
+            smem.countAndPrefixes[i] = sum;
+            sum += tmp;
+        }
+    }
 
     xpu::barrier();
 
@@ -43,6 +54,7 @@ XPU_KERNEL(JanSergeySort, JanSergeySortSmem, const size_t n, const experimental:
     }
 }
 
+/*
 XPU_D void prescan(JanSergeySortSmem& smem) {
     const int n = experimental::channelCount;
     const int countOffset = 0;
@@ -87,6 +99,7 @@ XPU_D void prescan(JanSergeySortSmem& smem) {
      smem.countAndPrefixes[countOffset + 2 * thid] = smem.temp[2 * thid]; // write results to device memory
      smem.countAndPrefixes[countOffset + 2 * thid + 1] = smem.temp[2 * thid + 1];
 }
+*/
 
 /*
   xpu::run_kernel<SortDigis>(xpu::grid::n_blocks(hfc.nModules * 2));

@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cstring>
+#include <cstdlib>
 #include "common.h"
 
 #include "benchmark/blocksort.h"
@@ -51,6 +52,7 @@ int main(int argc, char** argv) {
         runner.add(new stdsort_bench(aDigis, n));
 
         if (xpu::active_driver() != xpu::cpu) {
+            std::cout << "Using GPU.\n\n";
             runner.add(new blocksort_bench<BlockSort>(aDigis, n));
             runner.add(new jansergeysort_bench<JanSergeySort>(aDigis, n));
         } else {

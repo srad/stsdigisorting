@@ -4,6 +4,7 @@ project(StsDigiSort VERSION 1.0)
 
 set(CMAKE_CXX_STANDARD 17)
 
+#add_subdirectory(tests)
 add_subdirectory(lib/xpu)
 
 add_library(SortKernel SHARED sorting/SortKernel.cpp)

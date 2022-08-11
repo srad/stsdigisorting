@@ -2,7 +2,7 @@
 
 // Include host functions to control the GPU.
 #include <xpu/host.h>
-#include "../benchmark/benchmark.h"
+#include "benchmark.h"
 
 #include <iostream>
 #include <chrono>

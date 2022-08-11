@@ -23,25 +23,23 @@ namespace experimental {
 
         std::string line;
 
-        for (int i = 0; i < repeat; i++) {
-            // Skip header
-            std::getline(csv, line);
-            while (std::getline(csv, line)) {
-                std::stringstream ss(line);
-                std::vector<int> cols;
+        // Skip header
+        std::getline(csv, line);
+        while (std::getline(csv, line)) {
+            std::stringstream ss(line);
+            std::vector<int> cols;
 
-                while (ss.good()) {
-                    std::string substr;
-                    std:
-                    getline(ss, substr, ',');
-                    cols.push_back(std::stoi(substr));
-                }
+            while (ss.good()) {
+                std::string substr;
+                std::getline(ss, substr, ',');
+                cols.push_back(std::stoi(substr));
+            }
 
-                // address,system,unit,ladder,half-ladder,module,sensor,side,channel,time
+            // Artificial duplication of data for testing purposes.
+            // address,system,unit,ladder,half-ladder,module,sensor,side,channel,time
+            for (int i = 0; i < repeat; i++) {
                 vDigis.push_back(CbmStsDigi(cols[0], cols[1], cols[2], cols[3], cols[4], cols[5], cols[6], cols[7], cols[8], cols[9]));
             }
-            csv.clear();
-            csv.seekg(0);
         }
         csv.close();
 
