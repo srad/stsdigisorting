@@ -18,8 +18,6 @@ XPU_KERNEL(JanSergeySort, JanSergeySortSmem, const size_t n, const experimental:
     const int bucketEndIdx = endIndex[bucketIdx];
     const int threadStart = bucketStartIdx + xpu::thread_idx::x();
 
-    //__shared__ int countAndPrefixes[experimental::channelCount];
-
     // 1. Init all channel counters to zero: O(channelCount)
     for (int i = xpu::thread_idx::x(); i < experimental::channelCount; i += xpu::block_dim::x()) {
         smem.countAndPrefixes[i] = 0;

@@ -11,7 +11,7 @@
 template<typename Kernel>
 class jansergeysort_bench : public benchmark {
 
-    size_t n;
+    const size_t n;
 
     // Big difference here is that the digis are grouped in buckets and then bucket-wise sorted.
     experimental::CbmStsDigiBucket* bucket;

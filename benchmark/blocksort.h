@@ -11,9 +11,9 @@
 template<typename Kernel>
 class blocksort_bench : public benchmark {
 
-    size_t n;
+    const size_t n;
     const size_t elems_per_block = 32 * 32 * 200;
-    size_t n_blocks;
+    const size_t n_blocks;
 
     // Write the sorted result to CSV file.
     std::ofstream output;

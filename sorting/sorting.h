@@ -17,13 +17,13 @@ namespace experimental {
     /// <param name="startIndex"></param>
     /// <param name="endIndex"></param>
     /// <returns></returns>
-    cudaError_t janSergeySort(CbmStsDigi *buckets, const int bucketCount, const int digiCount, const int *startIndex, const int *endIndex) {
-        CbmStsDigi *dev_buckets = 0;
-        int *dev_startIndex = 0;
-        int *dev_endIndex = 0;
+    cudaError_t janSergeySort(CbmStsDigi* buckets, const int bucketCount, const int digiCount, const int* startIndex, const int* endIndex) {
+        CbmStsDigi* dev_buckets = 0;
+        int* dev_startIndex = 0;
+        int* dev_endIndex = 0;
 
-        CbmStsDigi *dev_output = 0;
-        int *dev_countAndPrefixes = 0;
+        CbmStsDigi* dev_output = 0;
+        int* dev_countAndPrefixes = 0;
 
         try {
             const int digiSize = digiCount * sizeof(CbmStsDigi);
@@ -36,20 +36,20 @@ namespace experimental {
             CHECK_ERROR(cudaSetDevice(0));
 
             // 1. Reserve memory on device and copy data to device.
-            CHECK_ERROR(cudaMalloc((void **) &dev_buckets, digiSize));
+            CHECK_ERROR(cudaMalloc((void**) &dev_buckets, digiSize));
             CHECK_ERROR(cudaMemcpy(dev_buckets, buckets, digiSize, cudaMemcpyHostToDevice));
 
             // Temp memory for sorted output. The input is copied to this output.
             // After temp copy the data is copied to the original bucket, by overwriting the elements in each bucket.
-            CHECK_ERROR(cudaMalloc((void **) &dev_output, digiSize));
+            CHECK_ERROR(cudaMalloc((void**) &dev_output, digiSize));
 
-            CHECK_ERROR(cudaMalloc((void **) &dev_startIndex, bucketSize));
+            CHECK_ERROR(cudaMalloc((void**) &dev_startIndex, bucketSize));
             CHECK_ERROR(cudaMemcpy(dev_startIndex, startIndex, bucketSize, cudaMemcpyHostToDevice));
 
-            CHECK_ERROR(cudaMalloc((void **) &dev_endIndex, bucketSize));
+            CHECK_ERROR(cudaMalloc((void**) &dev_endIndex, bucketSize));
             CHECK_ERROR(cudaMemcpy(dev_endIndex, endIndex, bucketSize, cudaMemcpyHostToDevice));
 
-            CHECK_ERROR(cudaMalloc((void **) &dev_countAndPrefixes, countAndPrefixesSize));
+            CHECK_ERROR(cudaMalloc((void**) &dev_countAndPrefixes, countAndPrefixesSize));
 
             constexpr int threadsPerBucket = 1024;
 
@@ -75,13 +75,13 @@ namespace experimental {
             // 3. Copy result to host.
             CHECK_ERROR(cudaMemcpy(buckets, dev_output, digiSize, cudaMemcpyDeviceToHost));
         }
-        catch (thrust::system_error &e) {
+        catch (thrust::system_error& e) {
             std::cerr << "CUDA error during some_function: " << e.what() << std::endl;
         }
-        catch (std::bad_alloc &e) {
+        catch (std::bad_alloc& e) {
             std::cerr << "Bad memory allocation during some_function: " << e.what() << std::endl;
         }
-        catch (std::runtime_error &e) {
+        catch (std::runtime_error& e) {
             std::cerr << "Runtime error during some_function: " << e.what() << std::endl;
         }
         catch (std::exception e) {

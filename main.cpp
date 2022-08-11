@@ -11,7 +11,7 @@
 
 int main(int argc, char** argv) {
     try {
-        // Command line paraams.
+        // Command line params.
         std::string input;
         std::string output;
         int repeat = 1;
