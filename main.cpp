@@ -15,7 +15,8 @@ int main(int argc, char** argv) {
         // Command line params.
         std::string input;
         std::string output;
-        int repeat = 1;
+        unsigned int repeat = 1;
+        unsigned int max_n = 0;
 
         for (int i = 1; i < argc; i++) {
             if (strcmp(argv[i], "-i") == 0) {
@@ -27,13 +28,17 @@ int main(int argc, char** argv) {
             } else if (strcmp(argv[i], "-r") == 0) {
                 repeat = std::stoi(argv[i + 1]);
                 std::cout << "Repeat: " << repeat << "\n";
+            } else if (strcmp(argv[i], "-n") == 0) {
+                // Caps the data size by some integer n.
+                max_n = std::stoi(argv[i + 1]);
+                std::cout << "n: " << max_n << "\n";
             }
         }
 
         if (input == "") throw std::invalid_argument("Input digis input file missing");
 
         // Read CSV and load into raw array.
-        auto vDigis = experimental::readCsv(input, repeat);
+        auto vDigis = experimental::readCsv(input, repeat, max_n);
         std::cout << "CSV loaded." << "\n\n";
 
         // Copy digis to raw array.

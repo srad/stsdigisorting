@@ -33,7 +33,7 @@ XPU_KERNEL(BlockSort, GpuSortSmem, experimental::CbmStsDigi* data, experimental:
     // extracts the key from the struct has to be passed.
     // Returns the buffer that contains the sorted data (either data or buf).
 
-    const size_t itemsPerBlock = numElems / xpu::grid_dim::x();
+    const size_t itemsPerBlock = numElems / xpu::block_dim::x();
     const size_t offset = itemsPerBlock * xpu::block_idx::x();
 
     experimental::CbmStsDigi* res = SortT(smem.sortBuf).sort(

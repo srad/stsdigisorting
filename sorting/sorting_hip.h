@@ -1,5 +1,6 @@
 #pragma once
 
+#include <hip/hip_runtime.h>
 #include "kernels.h"
 
 namespace experimental {
@@ -17,7 +18,7 @@ namespace experimental {
     /// <param name="startIndex"></param>
     /// <param name="endIndex"></param>
     /// <returns></returns>
-    cudaError_t janSergeySort(CbmStsDigi* buckets, const int bucketCount, const int digiCount, const int* startIndex, const int* endIndex) {
+    hipError_t janSergeySort(CbmStsDigi* buckets, const int bucketCount, const int digiCount, const int* startIndex, const int* endIndex) {
         CbmStsDigi* dev_buckets = 0;
         int* dev_startIndex = 0;
         int* dev_endIndex = 0;
@@ -33,47 +34,47 @@ namespace experimental {
             // This array is not really big, channelCount = 2048 and the number of buckets was limited in test runs (~1000).
             const int countAndPrefixesSize = bucketCount * channelCount * sizeof(int);
 
-            CHECK_ERROR(cudaSetDevice(0));
+            CHECK_ERROR(hipSetDevice(0));
 
             // 1. Reserve memory on device and copy data to device.
-            CHECK_ERROR(cudaMalloc((void**) &dev_buckets, digiSize));
-            CHECK_ERROR(cudaMemcpy(dev_buckets, buckets, digiSize, cudaMemcpyHostToDevice));
+            CHECK_ERROR(hipMalloc((void**) &dev_buckets, digiSize));
+            CHECK_ERROR(hipMemcpy(dev_buckets, buckets, digiSize, hipMemcpyHostToDevice));
 
             // Temp memory for sorted output. The input is copied to this output.
             // After temp copy the data is copied to the original bucket, by overwriting the elements in each bucket.
-            CHECK_ERROR(cudaMalloc((void**) &dev_output, digiSize));
+            CHECK_ERROR(hipMalloc((void**) &dev_output, digiSize));
 
-            CHECK_ERROR(cudaMalloc((void**) &dev_startIndex, bucketSize));
-            CHECK_ERROR(cudaMemcpy(dev_startIndex, startIndex, bucketSize, cudaMemcpyHostToDevice));
+            CHECK_ERROR(hipMalloc((void**) &dev_startIndex, bucketSize));
+            CHECK_ERROR(hipMemcpy(dev_startIndex, startIndex, bucketSize, hipMemcpyHostToDevice));
 
-            CHECK_ERROR(cudaMalloc((void**) &dev_endIndex, bucketSize));
-            CHECK_ERROR(cudaMemcpy(dev_endIndex, endIndex, bucketSize, cudaMemcpyHostToDevice));
+            CHECK_ERROR(hipMalloc((void**) &dev_endIndex, bucketSize));
+            CHECK_ERROR(hipMemcpy(dev_endIndex, endIndex, bucketSize, hipMemcpyHostToDevice));
 
-            CHECK_ERROR(cudaMalloc((void**) &dev_countAndPrefixes, countAndPrefixesSize));
+            CHECK_ERROR(hipMalloc((void**) &dev_countAndPrefixes, countAndPrefixesSize));
 
             constexpr int threadsPerBucket = 1024;
 
             // 2. Launch a kernel on the GPU with one thread for each bucket.
-            cudaMemset(dev_countAndPrefixes, 0, countAndPrefixesSize);
-            CHECK_ERROR(cudaDeviceSynchronize());
-            CHECK_ERROR(cudaGetLastError());
+            hipMemset(dev_countAndPrefixes, 0, countAndPrefixesSize);
+            CHECK_ERROR(hipDeviceSynchronize());
+            CHECK_ERROR(hipGetLastError());
 
-            countChannels<<<bucketCount, threadsPerBucket>>>(digiCount, dev_buckets, dev_countAndPrefixes, dev_startIndex, dev_endIndex);
+            hipLaunchKernelGGL(countChannels, bucketCount, threadsPerBucket, 0, 0, digiCount, dev_buckets, dev_countAndPrefixes, dev_startIndex, dev_endIndex);
             //countChannels << <bucketCount, threadsPerBucket >> > (digiCount, dev_buckets, dev_countAndPrefixes, dev_startIndex, dev_endIndex);
-            CHECK_ERROR(cudaDeviceSynchronize());
-            CHECK_ERROR(cudaGetLastError());
+            CHECK_ERROR(hipDeviceSynchronize());
+            CHECK_ERROR(hipGetLastError());
 
             //prescan << <bucketCount, 1024 >> > (dev_countAndPrefixes);
-            computePrefixSum<<<bucketCount, 1>>>(digiCount, dev_countAndPrefixes);
-            CHECK_ERROR(cudaDeviceSynchronize());
-            CHECK_ERROR(cudaGetLastError());
+            hipLaunchKernelGGL(computePrefixSum, bucketCount, 1, 0, 0, digiCount, dev_countAndPrefixes);
+            CHECK_ERROR(hipDeviceSynchronize());
+            CHECK_ERROR(hipGetLastError());
 
-            sortKernelParallel<<<bucketCount, 1024>>>(digiCount, dev_buckets, dev_output, dev_countAndPrefixes, bucketCount, dev_startIndex, dev_endIndex);
-            CHECK_ERROR(cudaDeviceSynchronize());
-            CHECK_ERROR(cudaGetLastError());
+            hipLaunchKernelGGL(sortKernelParallel, bucketCount, 1024, 0, 0, digiCount, dev_buckets, dev_output, dev_countAndPrefixes, bucketCount, dev_startIndex, dev_endIndex);
+            CHECK_ERROR(hipDeviceSynchronize());
+            CHECK_ERROR(hipGetLastError());
 
             // 3. Copy result to host.
-            CHECK_ERROR(cudaMemcpy(buckets, dev_output, digiSize, cudaMemcpyDeviceToHost));
+            CHECK_ERROR(hipMemcpy(buckets, dev_output, digiSize, hipMemcpyDeviceToHost));
         }
         catch (thrust::system_error& e) {
             std::cerr << "CUDA error during some_function: " << e.what() << std::endl;
@@ -88,12 +89,12 @@ namespace experimental {
             std::cerr << "Error: " << e.what() << std::endl;
         }
 
-        cudaFree(dev_countAndPrefixes);
-        cudaFree(dev_output);
-        cudaFree(dev_buckets);
-        cudaFree(dev_startIndex);
-        cudaFree(dev_endIndex);
+        hipFree(dev_countAndPrefixes);
+        hipFree(dev_output);
+        hipFree(dev_buckets);
+        hipFree(dev_startIndex);
+        hipFree(dev_endIndex);
 
-        return cudaGetLastError();
+        return hipGetLastError();
     }
 }
