@@ -35,7 +35,7 @@ public:
 
         std::copy(digis, digis + n, a.h());
         output.open("block_sort_output.csv", std::ios::out | std::ios::trunc);
-        printf("block_sort: n=%llu, n_blocks=%llu, elems_per_block=%llu\n", n, n_blocks, elems_per_block);
+        printf("block_sort: n=%lu, n_blocks=%lu, elems_per_block=%lu\n", n, n_blocks, elems_per_block);
     }
 
     void teardown() {
@@ -66,10 +66,10 @@ public:
         // Check if data is sorted.
         bool ok = true;
 
-        int k = 0;
-        for (int i = 0; i < n_blocks; i++) {
+        size_t k = 0;
+        for (size_t i = 0; i < n_blocks; i++) {
             // Offset 1 and compare the i-th element with the i-1-th element.
-            for (int j = 1; j < elems_per_block && k < n; j++, k++) {
+            for (size_t j = 1; j < elems_per_block && k < n; j++, k++) {
                 bool okThisRun = true;
 
                 // Digi i has always a >= bigger channel number after sorting than digi i-1.
@@ -85,8 +85,8 @@ public:
 
                 if (!okThisRun) {
                     std::cout << "Error: " << "\n";
-                    printf("k: %d/%d, i: %d, j-1: %d: (%d, %d, %d)\n", k, n, i, j - 1, dst.h()[i][j - 1].address, dst.h()[i][j - 1].channel, dst.h()[i][j - 1].time);
-                    printf("k: %d/%d, i: %d, j:   %d: (%d, %d, %d)\n", k, n, i, j, dst.h()[i][j].address, dst.h()[i][j].channel, dst.h()[i][j].time);
+                    printf("(%lu/%lu) (i: %lu, j-1: %lu): (%d, %d, %d)\n", k, n, i, j - 1, dst.h()[i][j - 1].address, dst.h()[i][j - 1].channel, dst.h()[i][j - 1].time);
+                    printf("(%lu/%lu) (i: %lu, j  : %lu): (%d, %d, %d)\n", k, n, i, j, dst.h()[i][j].address, dst.h()[i][j].channel, dst.h()[i][j].time);
                 }
             }
         }

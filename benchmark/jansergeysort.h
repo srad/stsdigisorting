@@ -83,7 +83,7 @@ public:
         bool ok = true;
 
         // Start at second element and compare to previous for all i.
-        for (int i = 1; i < n; i++) {
+        for (size_t i = 1; i < n; i++) {
             bool okThisRun = true;
 
             const auto& curr = buffOutput.h()[i];
@@ -102,8 +102,8 @@ public:
 
             if (!okThisRun) {
                 std::cout << "Error: " << "\n";
-                printf("(%d/%d): (%d, %d, %d)\n", i, n, prev.address, prev.channel, prev.time);
-                printf("(%d/%d): (%d, %d, %d)\n", i, n, curr.address, curr.channel, curr.time);
+                printf("(%lu/%lu): (%d, %d, %d)\n", i, n, prev.address, prev.channel, prev.time);
+                printf("(%lu/%lu): (%d, %d, %d)\n", i, n, curr.address, curr.channel, curr.time);
             }
         }
 
