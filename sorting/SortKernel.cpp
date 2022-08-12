@@ -35,6 +35,7 @@ XPU_KERNEL(BlockSort, GpuSortSmem, experimental::CbmStsDigi* data, experimental:
 
     const size_t itemsPerBlock = numElems / xpu::block_dim::x();
     const size_t offset = itemsPerBlock * xpu::block_idx::x();
+    printf("block_idx=%d, block_dim:x=%d, itemsPerBlock=%lu, offset=%lu, n=%lu\n", xpu::block_idx::x(), xpu::block_dim::x(), itemsPerBlock, offset, numElems);
 
     experimental::CbmStsDigi* res = SortT(smem.sortBuf).sort(
         &data[offset], itemsPerBlock, &buf[offset],

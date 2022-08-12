@@ -18,6 +18,8 @@ int main(int argc, char** argv) {
         std::string output;
         unsigned int repeat = 1;
         unsigned int max_n = 0;
+        bool writeOutput = false;
+        bool checkResult = false;
 
         for (int i = 1; i < argc; i++) {
             if (strcmp(argv[i], "-i") == 0) {
@@ -26,6 +28,12 @@ int main(int argc, char** argv) {
             } else if (strcmp(argv[i], "-o") == 0) {
                 output = argv[i + 1];
                 std::cout << "Output: " << output << "\n";
+            } else if (strcmp(argv[i], "-c") == 0) {
+                checkResult = true;
+                std::cout << "Checking result.\n";
+            } else if (strcmp(argv[i], "-w") == 0) {
+                writeOutput = true;
+                std::cout << "Writing sorted output to CSV file.\n";
             } else if (strcmp(argv[i], "-r") == 0) {
                 repeat = std::stoi(argv[i + 1]);
                 std::cout << "Repeat: " << repeat << "\n";
@@ -56,12 +64,12 @@ int main(int argc, char** argv) {
 
         benchmark_runner runner;
 
-        runner.add(new stdsort_bench(aDigis, n));
+        runner.add(new stdsort_bench(aDigis, n, writeOutput, checkResult));
 
         if (xpu::active_driver() != xpu::cpu) {
             std::cout << "Using GPU.\n\n";
-            //runner.add(new blocksort_bench<BlockSort>(aDigis, n));
-            runner.add(new jansergeysort_bench<JanSergeySort>(aDigis, n));
+            runner.add(new blocksort_bench<BlockSort>(aDigis, n, writeOutput, checkResult));
+            runner.add(new jansergeysort_bench<JanSergeySort>(aDigis, n, writeOutput, checkResult));
         } else {
             std::cout << "No GPU driver found.\n\n";
         }

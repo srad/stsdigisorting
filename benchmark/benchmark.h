@@ -11,12 +11,18 @@
 class benchmark {
 
 public:
+    bool write_;
+    bool check_;
+
+    benchmark(const bool in_write = false, const bool in_check = true) : write_(in_write), check_(in_check) {}
     virtual ~benchmark() {}
 
     virtual std::string name() = 0;
     virtual void setup() = 0;
     virtual void teardown() = 0;
     virtual void run() = 0;
+    virtual void write() { std::cout << "Benchmark->wirte() not implemented.\n"; }
+    virtual void check() { std::cout << "Benchmark->check() not implemented.\n"; }
 
     virtual size_t bytes() { return 0; }
 
@@ -47,13 +53,16 @@ public:
 private:
     std::vector <std::unique_ptr<benchmark>> benchmarks;
 
-    void run_benchmark(benchmark* b, int r) {
+    void run_benchmark(benchmark* b, const int r) {
         std::cout << "Running benchmark '" << b->name() << "'" << std::endl;
         b->setup();
 
         for (int i = 0; i < r + 1; i++) {
             b->run();
         }
+
+        if (b->write_) { b->write(); }
+        if (b->check_) { b->check(); }
 
         b->teardown();
     }

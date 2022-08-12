@@ -28,14 +28,11 @@ class jansergeysort_bench : public benchmark {
     xpu::hd_buffer<int> buffEndIndex;
 
 public:
-    jansergeysort_bench(const experimental::CbmStsDigi* in_digis, const size_t in_n) : n(in_n), digis(new experimental::CbmStsDigi[in_n]) {
+    jansergeysort_bench(const experimental::CbmStsDigi* in_digis, const size_t in_n, const bool in_write = false, const bool in_check = true) : n(in_n), digis(new experimental::CbmStsDigi[in_n]), benchmark(in_write, in_check) {
         std::copy(in_digis, in_digis + in_n, digis);
     }
 
-    ~jansergeysort_bench() {
-        delete[] digis;
-        delete bucket;
-    }
+    ~jansergeysort_bench() {}
 
     std::string name() { return xpu::get_name<Kernel>(); }
 
@@ -55,8 +52,25 @@ public:
     }
 
     void teardown() {
-        check();
+        delete[] digis;
+        delete bucket;
+        buffDigis.reset();
+        buffOutput.reset();
+    }
 
+    void run() {
+        xpu::copy(buffDigis, xpu::host_to_device);
+        xpu::copy(buffStartIndex, xpu::host_to_device);
+        xpu::copy(buffEndIndex, xpu::host_to_device);
+
+        // For now, one block per bucket.
+        xpu::run_kernel<Kernel>(xpu::grid::n_blocks(bucket->size()), n, buffDigis.d(), buffStartIndex.d(), buffEndIndex.d(), buffOutput.d());
+
+        // Copy result back to host.
+        xpu::copy(buffOutput, xpu::device_to_host);
+    }
+
+    void write() override {
         bucketOutput.open("bucket.csv", std::ios::out | std::ios::trunc);
         bucketOutput << "bucket,index,address,channel,time\n";
 
@@ -77,23 +91,9 @@ public:
 
         output.close();
         bucketOutput.close();
-        buffDigis.reset();
-        buffOutput.reset();
     }
 
-    void run() {
-        xpu::copy(buffDigis, xpu::host_to_device);
-        xpu::copy(buffStartIndex, xpu::host_to_device);
-        xpu::copy(buffEndIndex, xpu::host_to_device);
-
-        // For now, one block per bucket.
-        xpu::run_kernel<Kernel>(xpu::grid::n_blocks(bucket->size()), n, buffDigis.d(), buffStartIndex.d(), buffEndIndex.d(), buffOutput.d());
-
-        // Copy result back to host.
-        xpu::copy(buffOutput, xpu::device_to_host);
-    }
-
-    void check() {
+    void check() override {
         // Check if data is sorted.
         bool ok = true;
 

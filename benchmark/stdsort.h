@@ -20,37 +20,26 @@ class stdsort_bench : public benchmark {
     std::vector<float> executionTimeMs;
 
 public:
-    stdsort_bench(const experimental::CbmStsDigi* in_digis, const size_t in_n) : n(in_n), digis(new experimental::CbmStsDigi[in_n]), output(new experimental::CbmStsDigi[in_n]) {
+    stdsort_bench(const experimental::CbmStsDigi* in_digis, const size_t in_n, const bool write = false, const bool check = true) : n(in_n), digis(new experimental::CbmStsDigi[in_n]), output(new experimental::CbmStsDigi[in_n]), benchmark(write, check) {
         std::copy(in_digis, in_digis + n, digis);
     }
 
     ~stdsort_bench() {
-        delete[] digis;
-        delete[] output;
     }
 
     std::string name() { return "std::sort"; }
 
     void setup() {
-        file.open("std_sort_output.csv", std::ios::out | std::ios::trunc);
+        // Copy for each run a fresh output original digi array.
+        std::copy(digis, digis + n, output);
     }
 
     void teardown() {
-        check();
-
-        file << "index,address,channel,time\n";
-
-        for (int i = 0; i < n; i++) {
-            file << i << "," << output[i].address << "," << output[i].channel << "," << output[i].time << "\n";
-        }
-
-        file.close();
+        delete[] digis;
+        delete[] output;
     }
 
     void run() {
-        // Copy for each run a fresh output original digi array.
-        std::copy(digis, digis + n, output);
-
         auto started = std::chrono::high_resolution_clock::now();
 
         std::sort(output, output + n, [](const experimental::CbmStsDigi& a, const experimental::CbmStsDigi& b) {
@@ -61,7 +50,18 @@ public:
         executionTimeMs.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(done - started).count());
     }
 
-    void check() {
+    void write() override {
+        file.open("std_sort_output.csv", std::ios::out | std::ios::trunc);
+        file << "index,address,channel,time\n";
+
+        for (int i = 0; i < n; i++) {
+            file << i << "," << output[i].address << "," << output[i].channel << "," << output[i].time << "\n";
+        }
+
+        file.close();
+    }
+
+    void check() override {
         // Check if data is sorted.
         bool ok = true;
 
