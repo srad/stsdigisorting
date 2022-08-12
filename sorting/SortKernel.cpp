@@ -34,15 +34,18 @@ XPU_KERNEL(BlockSort, GpuSortSmem, experimental::CbmStsDigi* data, experimental:
     // Returns the buffer that contains the sorted data (either data or buf).
 
     const size_t itemsPerBlock = numElems / xpu::block_dim::x();
-    const size_t offset = itemsPerBlock * xpu::block_idx::x();
-    printf("block_idx=%d, block_dim:x=%d, itemsPerBlock=%lu, offset=%lu, n=%lu\n", xpu::block_idx::x(), xpu::block_dim::x(), itemsPerBlock, offset, numElems);
+    const size_t itemsPerThread = itemsPerBlock / 64;
+    const size_t offset = xpu::thread_idx::x() * itemsPerThread + itemsPerBlock * xpu::block_idx::x();
+    //printf("block_idx=%d, block_dim:x=%d, xpu::grid_dim::x=%d, xpu::thread_idx::x=%d, itemsPerBlock=%lu, itemsPerThread=%lu, offset=%lu, n=%lu\n", xpu::block_idx::x(), xpu::block_dim::x(), xpu::grid_dim::x(), xpu::thread_idx::x(), itemsPerBlock, itemsPerThread, offset, numElems);
 
+    if ((offset + itemsPerThread) < numElems) {
     experimental::CbmStsDigi* res = SortT(smem.sortBuf).sort(
-        &data[offset], itemsPerBlock, &buf[offset],
+        &data[offset], itemsPerThread, &buf[offset],
         [](const experimental::CbmStsDigi& a) { return ((unsigned long int) a.channel) << 32 | (unsigned long int) (a.time); }
     );
 
     if (xpu::block_idx::x() == 0) {
         *out = res;
+    }
     }
 }
