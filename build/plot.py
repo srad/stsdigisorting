@@ -17,23 +17,17 @@ with open("benchmark_results.csv") as fp:
 
 n_in_millions = map(lambda x:  int(x[0]) / 1000000, data)
 
-algo0 = np.array(map(lambda x: x[1], data), dtype=np.int)
-algo1 = np.array(map(lambda x: x[2], data), dtype=np.int)
 
-speedup = map(lambda x: max(float(x[1]), 1.0) / max(float(x[2]), 1.0), data)
+#algo0 = np.array(map(lambda x: x[1], data), dtype=np.int)
+algo1 = np.array(map(lambda x: x[1], data), dtype=np.int)
+algo2 = np.array(map(lambda x: x[2], data), dtype=np.int)
 
-#print(data)
-print(headers)
-print(n_in_millions)
-print(algo0)
-print(algo1)
-print(headers[1])
-print(headers[2])
-print(speedup)
+speedup = map(lambda x, y: max(float(x), 1.0) / max(float(y), 1.0), algo1, algo2)
   
 # plot lines
-plt.plot(n_in_millions, algo0, label = headers[1], linestyle="-")
-plt.plot(n_in_millions, algo1, label = headers[2], linestyle="--")
+#plt.plot(n_in_millions, algo0, label = headers[1], linestyle="-")
+plt.plot(n_in_millions, algo1, label = headers[1], linestyle="-")
+plt.plot(n_in_millions, algo2, label = headers[2], linestyle="--")
 
 plt.xlabel("Digis (in millions)")
 plt.ylabel("ms")
