@@ -5,4 +5,4 @@
 #include "../datastructures.h"
 
 struct BlockSortKernel {};
-XPU_EXPORT_KERNEL(BlockSortKernel, BlockSort, experimental::CbmStsDigi*, experimental::CbmStsDigi*, experimental::CbmStsDigi**, size_t);
+XPU_EXPORT_KERNEL(BlockSortKernel, BlockSort, experimental::CbmStsDigi*, int*, int*, experimental::CbmStsDigi*, experimental::CbmStsDigi**, size_t);

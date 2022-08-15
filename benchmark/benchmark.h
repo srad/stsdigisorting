@@ -62,7 +62,7 @@ private:
         }
 
         if (b->write_) { b->write(); }
-        if (b->check_) { b->check(); }
+        if (b->check_) { std::cout << "Checking " << b->name() << "\n"; b->check(); }
 
         b->teardown();
     }

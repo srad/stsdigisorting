@@ -14,27 +14,39 @@ XPU_IMAGE(BlockSortKernel);
 #define CBM_STS_SORT_ITEMS_PER_THREAD 6
 #endif
 
-using block_sort_t = xpu::block_sort<unsigned long int, experimental::CbmStsDigi, 64, 2>;
+// <Bock size=thread per block (hier zumindest), items per thread>
+using SortT = xpu::block_sort<unsigned long int, experimental::CbmStsDigi, 64, 2>;
+
 struct GpuSortSmem {
-    using sort_buf_t = typename block_sort_t::storage_t;
-    sort_buf_t sortbuf;
+    typename SortT::storage_t sortBuf;
 };
 
-XPU_KERNEL(BlockSort, GpuSortSmem, experimental::CbmStsDigi* data, experimental::CbmStsDigi* buf, experimental::CbmStsDigi** out, const size_t numElems) {
-    experimental::CbmStsDigi* res = block_sort_t(smem.sortbuf).sort(data, numElems, buf, [](const experimental::CbmStsDigi& a) { return ((unsigned long int) a.channel) << 32 | (unsigned long int) (a.time); });
+XPU_KERNEL(BlockSort, GpuSortSmem, experimental::CbmStsDigi* data, int* startIndex, int* endIdex, experimental::CbmStsDigi* buf, experimental::CbmStsDigi** out, const size_t numElems) {
+    // Bucket size
+    const size_t itemsPerThread = endIdex[xpu::block_idx::x()] - startIndex[xpu::block_idx::x()] + 1;
+    const size_t offset = startIndex[xpu::block_idx::x()];
 
-    if (xpu::block_idx::x() == 0) {
-        *out = res;
+    // Do not overshoot array boundary when you have more blocks than threads.
+    if ((offset + itemsPerThread) < numElems) {
+        experimental::CbmStsDigi* res = SortT(smem.sortBuf).sort(
+            &data[offset], itemsPerThread, &buf[offset],
+            [](const experimental::CbmStsDigi& a) { return ((unsigned long int) a.channel) << 32 | (unsigned long int) (a.time); }
+        );
+
+        // Once the sorting is completed, the first thread in each Block write
+        if (xpu::thread_idx::x() == 0) {
+            out[xpu::block_idx::x()] = res;
+        }
     }
 }
 
+/*
 // Optional shorthand for the sorting class.
 //
 // Template arguments are the type of the key that is sorted,
 // size of the gpu block (currently hard-coded at 64 threads)
 // and the number of keys that are sorted by each thread with
 // the underlying cub::BlockRadixSort implementation.
-/*
 using SortT = xpu::block_sort<unsigned long int, experimental::CbmStsDigi, CBM_STS_SORT_BLOCK_SIZE, CBM_STS_SORT_ITEMS_PER_THREAD>;
 
 // Define type that is used to allocate shared memory.
