@@ -5,6 +5,9 @@ xpu
 build/**
 !build/run.sh
 !build/cm.sh
+!build/bench.sh
+!build/csanitze.sh
+!build/plot.py
 
 *~
 *.a

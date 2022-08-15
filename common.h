@@ -13,6 +13,16 @@ namespace experimental {
 
     constexpr int channelCount = 2048;
 
+    bool file_exists(const std::string fileName) {
+        std::ifstream infile(fileName);
+        return infile.good();
+    }
+
+    bool file_empty(const std::string fileName){
+        std::ifstream infile(fileName);
+        return infile.peek() == std::ifstream::traits_type::eof();
+    }
+
     std::vector <CbmStsDigi> readCsv(const std::string filename, const unsigned int repeat = 1, const unsigned int n = 0) {
         std::ifstream csv(filename);
         if (!csv.is_open()) {

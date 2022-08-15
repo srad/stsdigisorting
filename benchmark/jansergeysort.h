@@ -7,11 +7,14 @@
 #include "benchmark.h"
 #include <iostream>
 #include <vector>
+#include <chrono>
 
 template<typename Kernel>
 class jansergeysort_bench : public benchmark {
 
     const size_t n;
+
+    std::vector<float> timings_;
 
     // Big difference here is that the digis are grouped in buckets and then bucket-wise sorted.
     experimental::CbmStsDigiBucket* bucket;
@@ -58,13 +61,20 @@ public:
         buffOutput.reset();
     }
 
+    size_t size_n() const override { return n; }
+
     void run() {
         xpu::copy(buffDigis, xpu::host_to_device);
         xpu::copy(buffStartIndex, xpu::host_to_device);
         xpu::copy(buffEndIndex, xpu::host_to_device);
 
+        auto started = std::chrono::high_resolution_clock::now();
+
         // For now, one block per bucket.
         xpu::run_kernel<Kernel>(xpu::grid::n_blocks(bucket->size()), n, buffDigis.d(), buffStartIndex.d(), buffEndIndex.d(), buffOutput.d());
+
+        auto done = std::chrono::high_resolution_clock::now();
+        timings_.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(done - started).count());
 
         // Copy result back to host.
         xpu::copy(buffOutput, xpu::device_to_host);
@@ -131,6 +141,6 @@ public:
 
     size_t bytes() { return n * sizeof(experimental::CbmStsDigi); }
 
-    std::vector<float> timings() { return xpu::get_timing<Kernel>(); }
+    std::vector<float> timings() { return timings_; /*return xpu::get_timing<Kernel>();*/ }
 
 };

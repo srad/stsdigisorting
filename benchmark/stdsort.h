@@ -34,6 +34,8 @@ public:
         std::copy(digis, digis + n, output);
     }
 
+    size_t size_n() const override { return n; }
+
     void teardown() {
         delete[] digis;
         delete[] output;

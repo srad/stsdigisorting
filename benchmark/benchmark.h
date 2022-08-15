@@ -6,13 +6,15 @@
 #include <random>
 #include <string>
 #include <sstream>
+#include <cmath>
 #include <vector>
+#include "../common.h"
 
 class benchmark {
 
 public:
-    bool write_;
-    bool check_;
+    const bool write_;
+    const bool check_;
 
     benchmark(const bool in_write = false, const bool in_check = true) : write_(in_write), check_(in_check) {}
     virtual ~benchmark() {}
@@ -21,6 +23,7 @@ public:
     virtual void setup() = 0;
     virtual void teardown() = 0;
     virtual void run() = 0;
+    virtual size_t size_n() const = 0;
     virtual void write() { std::cout << "Benchmark->wirte() not implemented.\n"; }
     virtual void check() { std::cout << "Benchmark->check() not implemented.\n"; }
 
@@ -30,9 +33,16 @@ public:
 
 };
 
+struct bench_result {
+    float min;
+    float max;
+    float median;
+};
+
 class benchmark_runner {
 
 public:
+    const std::string filename = "benchmark_results.csv";
     void add(benchmark* b) { benchmarks.emplace_back(b); }
 
     void run(int n) {
@@ -40,17 +50,36 @@ public:
             run_benchmark(b.get(), n);
         }
 
+        results_csv.open(filename, std::ios::out | std::ios::app);
+
+        // Headers
+        if (experimental::file_empty(filename)) {
+            results_csv << "n";
+            for (int i=0; i < benchmarks.size(); i++) {
+                results_csv << "," << benchmarks[i].get()->name();
+            }
+            results_csv << "\n";
+        }
+
         print_entry("Benchmark");
         print_entry("Min");
         print_entry("Max");
         print_entry("Median");
         std::cout << std::endl;
+
+        // Rows
+        results_csv << benchmarks[0].get()->size_n();
         for (auto& b: benchmarks) {
-            print_results(b.get());
+            const auto res = results(b.get());
+            results_csv << "," << res.median;
+            //print_results(b.get());
         }
+        results_csv << "\n";
+        results_csv.close();
     }
 
 private:
+    std::ofstream results_csv;
     std::vector <std::unique_ptr<benchmark>> benchmarks;
 
     void run_benchmark(benchmark* b, const int r) {
@@ -67,9 +96,8 @@ private:
         b->teardown();
     }
 
-    void print_results(benchmark* b) {
+    bench_result results(benchmark* b) const {
         std::vector<float> timings = b->timings();
-        size_t bytes = b->bytes();
 
         timings.erase(timings.begin()); // discard warmup run
         std::sort(timings.begin(), timings.end());
@@ -80,26 +108,33 @@ private:
         float max = timings.back();
         float median = timings[timings.size() / 2];
 
+        return bench_result{min, max, median};
+    }
+
+    void print_results(benchmark* b) {
+        const auto result = results(b);
+        size_t bytes = b->bytes();
+
         std::stringstream ss;
         ss << std::fixed << std::setprecision(2);
 
-        ss << min << "ms";
+        ss << result.min << "ms";
         if (bytes > 0) {
-            ss << " (" << gb_s(bytes, min) << "GB/s)";
+            ss << " (" << gb_s(bytes, result.min) << "GB/s)";
         }
         print_entry(ss.str());
         ss.str("");
 
-        ss << max << "ms";
+        ss << result.max << "ms";
         if (bytes > 0) {
-            ss << " (" << gb_s(bytes, max) << "GB/s)";
+            ss << " (" << gb_s(bytes, result.max) << "GB/s)";
         }
         print_entry(ss.str());
         ss.str("");
 
-        ss << median << "ms";
+        ss << result.median << "ms";
         if (bytes > 0) {
-            ss << " (" << gb_s(bytes, median) << "GB/s)";
+            ss << " (" << gb_s(bytes, result.median) << "GB/s)";
         }
         print_entry(ss.str());
         ss.str("");

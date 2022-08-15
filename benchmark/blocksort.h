@@ -8,6 +8,7 @@
 
 #include <iostream>
 #include <vector>
+#include <chrono>
 
 template<typename Kernel>
 class blocksort_bench : public benchmark {
@@ -15,6 +16,8 @@ class blocksort_bench : public benchmark {
     const size_t n;
     size_t elems_per_block;
     const size_t n_blocks = 64; // seems hardcoded in block_sort
+
+    std::vector<float> timings_;
 
     // Write the sorted result to CSV file.
     std::ofstream output;
@@ -66,8 +69,13 @@ public:
         xpu::copy(buffStartIndex, xpu::host_to_device);
         xpu::copy(buffEndIndex, xpu::host_to_device);
 
+        auto started = std::chrono::high_resolution_clock::now();
+
         // const experimental::CbmStsDigi* data, const int* startIndex, const int* endIdex, experimental::CbmStsDigi* buf, experimental::CbmStsDigi** out, const size_t numElems
         xpu::run_kernel<Kernel>(xpu::grid::n_blocks(bucket->size()), buffDigis.d(), buffStartIndex.d(), buffEndIndex.d(), devBuffer, devOutput, n);
+
+        auto done = std::chrono::high_resolution_clock::now();
+        timings_.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(done - started).count());
 
         // Get the buffer that contains the sorted data.
         experimental::CbmStsDigi* hostOutput = nullptr;
@@ -75,18 +83,6 @@ public:
 
         // Copy to back host.
         xpu::copy(sorted, hostOutput, n);
-
-        /*
-        size_t k=0;
-        // Copy block-wise the sorted results to the flat array "sorted".
-        for (int i=0; i < n_blocks; i++) {
-            xpu::copy(buffSortedBlock.h(), buffOutput.h()[0]);
-            for(int j=0; j < elems_per_block && k < n; j++, k++) {
-                sorted[k] = buffSortedBlock.h()[j];
-            }
-            //std::copy(buffOutput.h(), buffOutput.h()[i] + elems_per_block, sorted + (i * elems_per_block));
-        }
-        */
     }
 
     void teardown() {
@@ -98,27 +94,6 @@ public:
         buffEndIndex.reset();
         xpu::free(devOutput);
         xpu::free(devBuffer);
-
-        /*
-    bool ok = true;
-    for (size_t block = 0; block < n_blocks; block++) {
-        size_t offset = block * elems_per_block;
-        for (size_t i = 1; i < elems_per_block; i++) {
-            auto faa = (sorted[offset+i-1].key <= sorted[offset+i].key);
-            ok &= faa;
-        }
-    }
-
-        output.open("block_sort_output.csv", std::ios::out | std::ios::trunc);
-        output << "index,address,channel,time\n";
-
-        int k = 0;
-        for (int i = 0; i < n_blocks; i++) {
-            for (int j = 0; j < elems_per_block && k < n; j++) {
-                output << k++ << "," << buffOutput.h()[i][j].address << "," << buffOutput.h()[i][j].channel << "," << buffOutput.h()[i][j].time << "\n";
-            }
-        }
-        */
     }
 
     void check() override {
@@ -156,8 +131,22 @@ public:
         }
     }
 
+    size_t size_n() const override { return n; }
+
+    void write() override {
+        output.open("block_sort_output.csv", std::ios::out | std::ios::trunc);
+        output << "index,address,channel,time\n";
+
+        for (int i = 0; i < n; i++) {
+            output << i << "," << sorted[i].address << "," << sorted[i].channel << "," << sorted[i].time << "\n";
+        }
+
+        output.close();
+    }
+
     size_t bytes() { return n * sizeof(experimental::CbmStsDigi); }
 
-    std::vector<float> timings() { return xpu::get_timing<Kernel>(); }
+    // return xpu::get_timing<Kernel>();
+    std::vector<float> timings() { return timings_; }
 
 };
