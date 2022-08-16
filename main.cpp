@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
             std::cout << "Using GPU.\n\n";
             runner.add(new jansergeysort_bench<JanSergeySort>(aDigis, n, writeOutput, checkResult));
         } else {
-            // Only on CPU.
+            // Only on
             runner.add(new stdsort_bench(aDigis, n, writeOutput, checkResult));
             std::cout << "No GPU device used.\n\n";
         }

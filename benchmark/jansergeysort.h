@@ -33,7 +33,7 @@ public:
 
     ~jansergeysort_bench() {}
 
-    std::string name() { return xpu::get_name<Kernel>(); }
+    std::string name() { return "JanSergeySort"; }
 
     void setup() {
         buffDigis = xpu::hd_buffer<experimental::CbmStsDigi>(n);
@@ -73,7 +73,9 @@ public:
         xpu::run_kernel<Kernel>(xpu::grid::n_blocks(bucket->size()), n, buffDigis.d(), buffStartIndex.d(), buffEndIndex.d(), buffOutput.d());
 
         const auto done = std::chrono::high_resolution_clock::now();
-        timings_.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(done - started).count());
+        const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(done - started).count();
+        //std::cout << name() << " ms: " << ms << "\n";
+        timings_.push_back(ms);
 
         // Copy result back to host.
         xpu::copy(buffOutput, xpu::device_to_host);
@@ -105,6 +107,6 @@ public:
 
     size_t bytes() { return n * sizeof(experimental::CbmStsDigi); }
 
-    std::vector<float> timings() { return timings_; /*return xpu::get_timing<Kernel>();*/ }
+    std::vector<float> timings() { return timings_; }
 
 };

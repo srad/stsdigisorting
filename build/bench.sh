@@ -5,7 +5,7 @@ runtime_file="runtime_$stamp.png"
 speedup_file="speedup_$stamp.png"
 inc=1000000
 n=$(inc)
-DEVICE=cpu
+DEVICE=cuda0
 for i in {1..100}; do
   echo
   echo $i
