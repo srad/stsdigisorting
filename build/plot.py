@@ -31,7 +31,7 @@ speedup = map(lambda x, y: max(float(x), 1.0) / max(float(y), 1.0), algo1, algo2
 plt.plot(n_in_millions, algo1, label = headers[1], linestyle="-")
 plt.plot(n_in_millions, algo2, label = headers[2], linestyle="--")
 
-plt.title("Device: " + os.getenv('XPU_DEVICE'))
+plt.title("Median runtime on device '" + os.getenv('XPU_DEVICE') + "'")
 plt.xlabel("Digis (in millions)")
 plt.ylabel("ms")
 
@@ -41,7 +41,7 @@ plt.legend()
 if not os.path.exists("./plots"):
     os.makedirs("./plots")
 
-plt.savefig('./plots/' + sys.argv[1])
+plt.savefig('./plots/' + sys.argv[1], dpi=300)
 
 plt.figure().clear()
 
@@ -49,4 +49,4 @@ plt.plot(n_in_millions, speedup, label = "Speedup", linestyle="-")
 
 plt.xlabel("Digis (in millions)")
 plt.ylabel("Speedup")
-plt.savefig('./plots/' + sys.argv[2])
+plt.savefig('./plots/' + sys.argv[2], dpi=300)

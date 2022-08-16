@@ -63,14 +63,16 @@ int main(int argc, char** argv) {
 
         benchmark_runner runner;
 
-        runner.add(new stdsort_bench(aDigis, n, writeOutput, checkResult));
+        // Run block sort on all devices.
         runner.add(new blocksort_bench<BlockSort>(aDigis, n, writeOutput, checkResult));
 
         if (xpu::active_driver() != xpu::cpu) {
             std::cout << "Using GPU.\n\n";
             runner.add(new jansergeysort_bench<JanSergeySort>(aDigis, n, writeOutput, checkResult));
         } else {
-            std::cout << "No GPU driver found.\n\n";
+            // Only on CPU.
+            runner.add(new stdsort_bench(aDigis, n, writeOutput, checkResult));
+            std::cout << "No GPU device used.\n\n";
         }
 
         runner.run(10);

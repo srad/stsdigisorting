@@ -96,41 +96,6 @@ public:
         xpu::free(devBuffer);
     }
 
-    void check() override {
-        // Check if data is sorted.
-        bool ok = true;
-
-        // Start at second element and compare to previous for all i.
-        for (size_t i = 1; i < n; i++) {
-            bool okThisRun = true;
-
-            const auto& curr = sorted[i];
-            const auto& prev = sorted[i - 1];
-
-            // Within the same address range, channel numbers increase.
-            if (curr.address == prev.address) {
-                ok &= curr.channel >= prev.channel;
-                okThisRun &= curr.channel >= prev.channel;
-            }
-            if (curr.channel == prev.channel) {
-                ok &= curr.time >= prev.time;
-                okThisRun &= curr.time >= prev.time;
-            }
-
-            if (!okThisRun) {
-                std::cout << "\nBlockSort Error: " << "\n";
-                printf("(%lu/%lu): (%d, %d, %d)\n", i-1, n, prev.address, prev.channel, prev.time);
-                printf("(%lu/%lu): (%d, %d, %d)\n", i, n, curr.address, curr.channel, curr.time);
-            }
-        }
-
-        if (ok) {
-            std::cout << "BlockSort: Data is sorted!" << std::endl;
-        } else {
-            std::cout << "BlockSort Error: Data is not sorted!" << std::endl;
-        }
-    }
-
     size_t bytes() { return n * sizeof(experimental::CbmStsDigi); }
 
     std::vector<float> timings() { return timings_; }

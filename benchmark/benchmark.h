@@ -78,7 +78,7 @@ public:
                 errorCount++;
                 std::cout << name() << " Error: " << "\n";
                 printf("(%lu/%lu): (%d, %d, %d)\n", i-1, size(), prev.address, prev.channel, prev.time);
-                printf("(%lu/%lu): (%d, %d, %d)\n", i, size(), curr.address, curr.channel, curr.time);
+                printf("(%lu/%lu): (%d, %d, %d)\n\n", i, size(), curr.address, curr.channel, curr.time);
             }
         }
 
@@ -131,7 +131,7 @@ private:
     std::vector <std::unique_ptr<benchmark>> benchmarks;
 
     void run_benchmark(benchmark* b, const int r) {
-        std::cout << "Running benchmark '" << b->name() << "'" << std::endl;
+        std::cout << "------------------------------------------------------------\nRunning benchmark '" << b->name() << "'\n------------------------------------------------------------" << std::endl;
         b->setup();
 
         for (int i = 0; i < r + 1; i++) {
@@ -142,6 +142,7 @@ private:
         if (b->check_) { std::cout << "Checking " << b->name() << "\n"; b->check(); }
 
         b->teardown();
+        std::cout << "\n";
     }
 
     struct timing_results {
