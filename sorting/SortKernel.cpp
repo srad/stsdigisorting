@@ -33,7 +33,7 @@ XPU_KERNEL(BlockSort, GpuSortSmem, experimental::CbmStsDigi* data, int* startInd
             [](const experimental::CbmStsDigi& a) { return ((unsigned long int) a.channel) << 32 | (unsigned long int) (a.time); }
         );
 
-        // Once the sorting is completed, the first thread in each Block sets sort result.
+        // Once the sorting is completed, the first thread in each Block write
         if (xpu::thread_idx::x() == 0) {
             out[xpu::block_idx::x()] = res;
         }

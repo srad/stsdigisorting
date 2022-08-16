@@ -6,6 +6,9 @@
 #include <fstream>
 #include <vector>
 #include <exception>
+#include <iomanip> // put_time
+#include <chrono>
+#include <cstdlib>
 
 #include "datastructures.h"
 
@@ -13,14 +16,31 @@ namespace experimental {
 
     constexpr int channelCount = 2048;
 
-    bool file_exists(const std::string fileName) {
-        std::ifstream infile(fileName);
-        return infile.good();
+    void create_dir(std::string dir) {
+        const int dir_err = std::system(("mkdir -p " + dir).c_str());
+        if (dir_err == -1) {
+            std::cerr << "Error creating directory!n";
+        }
+    }
+
+    bool file_exists(const std::string name) {
+        std::ifstream f(name.c_str());
+        return f.good();
     }
 
     bool file_empty(const std::string fileName){
         std::ifstream infile(fileName);
         return infile.peek() == std::ifstream::traits_type::eof();
+    }
+
+    std::string stamp_name(const std::string filename, const std::string ext) {
+        auto now = std::chrono::system_clock::now();
+        auto in_time_t = std::chrono::system_clock::to_time_t(now);
+
+        std::stringstream datetime;
+        datetime << std::put_time(std::localtime(&in_time_t), "%Y-%m-%d %X");
+     
+        return filename + "_" + datetime.str() + "." + ext;
     }
 
     std::vector <CbmStsDigi> readCsv(const std::string filename, const unsigned int repeat = 1, const unsigned int n = 0) {

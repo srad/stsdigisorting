@@ -39,7 +39,6 @@ int main(int argc, char** argv) {
                 std::cout << "Repeat: " << repeat << "\n";
             } else if (strcmp(argv[i], "-n") == 0) {
                 // Caps the data size by some integer n.
-                // n is powers of 10.
                 max_n = std::stoi(argv[i + 1]);
                 std::cout << "n: " << max_n << "\n";
             }
@@ -64,11 +63,11 @@ int main(int argc, char** argv) {
 
         benchmark_runner runner;
 
-        //runner.add(new stdsort_bench(aDigis, n, writeOutput, checkResult));
+        runner.add(new stdsort_bench(aDigis, n, writeOutput, checkResult));
+        runner.add(new blocksort_bench<BlockSort>(aDigis, n, writeOutput, checkResult));
 
         if (xpu::active_driver() != xpu::cpu) {
             std::cout << "Using GPU.\n\n";
-            runner.add(new blocksort_bench<BlockSort>(aDigis, n, writeOutput, checkResult));
             runner.add(new jansergeysort_bench<JanSergeySort>(aDigis, n, writeOutput, checkResult));
         } else {
             std::cout << "No GPU driver found.\n\n";

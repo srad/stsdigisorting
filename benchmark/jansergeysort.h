@@ -19,10 +19,6 @@ class jansergeysort_bench : public benchmark {
     // Big difference here is that the digis are grouped in buckets and then bucket-wise sorted.
     experimental::CbmStsDigiBucket* bucket;
 
-    // Write the sorted result to CSV file.
-    std::ofstream output;
-    std::ofstream bucketOutput;
-
     experimental::CbmStsDigi* digis;
     xpu::hd_buffer <experimental::CbmStsDigi> buffDigis;
     xpu::hd_buffer <experimental::CbmStsDigi> buffOutput;
@@ -41,6 +37,8 @@ public:
 
     void setup() {
         buffDigis = xpu::hd_buffer<experimental::CbmStsDigi>(n);
+        std::copy(digis, digis + n, buffDigis.h());
+        
         buffOutput = xpu::hd_buffer<experimental::CbmStsDigi>(n);
 
         bucket = new experimental::CbmStsDigiBucket(digis, n);
@@ -61,27 +59,38 @@ public:
         buffOutput.reset();
     }
 
-    size_t size_n() const override { return n; }
+    size_t size_n() const { return n; }
 
     void run() {
         xpu::copy(buffDigis, xpu::host_to_device);
+
         xpu::copy(buffStartIndex, xpu::host_to_device);
         xpu::copy(buffEndIndex, xpu::host_to_device);
 
-        auto started = std::chrono::high_resolution_clock::now();
+        const auto started = std::chrono::high_resolution_clock::now();
 
         // For now, one block per bucket.
         xpu::run_kernel<Kernel>(xpu::grid::n_blocks(bucket->size()), n, buffDigis.d(), buffStartIndex.d(), buffEndIndex.d(), buffOutput.d());
 
-        auto done = std::chrono::high_resolution_clock::now();
+        const auto done = std::chrono::high_resolution_clock::now();
         timings_.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(done - started).count());
 
         // Copy result back to host.
         xpu::copy(buffOutput, xpu::device_to_host);
     }
 
+    size_t size() override { return n; }
+
+    experimental::CbmStsDigi* output() override { return buffOutput.h(); }
+
     void write() override {
-        bucketOutput.open("bucket.csv", std::ios::out | std::ios::trunc);
+        benchmark::write();
+        
+        // +------------------------------------------------------------------------------+
+        // |                               Bucket data                                    |
+        // +------------------------------------------------------------------------------+
+        std::ofstream bucketOutput;
+        bucketOutput.open("jan_sergey_bucket.csv", std::ios::out | std::ios::trunc);
         bucketOutput << "bucket,index,address,channel,time\n";
 
         for(int i=0; i < bucket->size(); i++) {
@@ -91,52 +100,7 @@ public:
                 bucketOutput << i << "," << j << "," << bucket->digis[j].address << "," << bucket->digis[j].channel << "," << bucket->digis[j].time  << "\n";
             }
         }
-
-        output.open("jansergey_sort_output.csv", std::ios::out | std::ios::trunc);
-        output << "index,address,channel,time\n";
-
-        for (int i = 0; i < n; i++) {
-            output << i << "," << buffOutput.h()[i].address << "," << buffOutput.h()[i].channel << "," << buffOutput.h()[i].time << "\n";
-        }
-
-        output.close();
         bucketOutput.close();
-    }
-
-    void check() override {
-        // Check if data is sorted.
-        bool ok = true;
-
-        // Start at second element and compare to previous for all i.
-        for (size_t i = 1; i < n; i++) {
-            bool okThisRun = true;
-
-            const auto& curr = buffOutput.h()[i];
-            const auto& prev = buffOutput.h()[i - 1];
-
-            // Within the same address range, channel numbers increase.
-            if (curr.address == prev.address) {
-                ok &= curr.channel >= prev.channel;
-                okThisRun &= curr.channel >= prev.channel;
-            }
-            if (curr.channel == prev.channel) {
-                ok &= curr.time >= prev.time;
-                okThisRun &= curr.time >= prev.time;
-            }
-
-
-            if (!okThisRun) {
-                std::cout << "\nJanSergeySort Error: " << "\n";
-                printf("(%lu/%lu): (%d, %d, %d)\n", i-1, n, prev.address, prev.channel, prev.time);
-                printf("(%lu/%lu): (%d, %d, %d)\n", i, n, curr.address, curr.channel, curr.time);
-            }
-        }
-
-        if (ok) {
-            std::cout << "Data is sorted!" << std::endl;
-        } else {
-            std::cout << "Error: Data is not sorted!" << std::endl;
-        }
     }
 
     size_t bytes() { return n * sizeof(experimental::CbmStsDigi); }

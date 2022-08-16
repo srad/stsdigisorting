@@ -1,20 +1,22 @@
 #pragma once
 
+#include "../datastructures.h"
 #include <algorithm>
 #include <iomanip>
 #include <memory>
 #include <random>
 #include <string>
 #include <sstream>
-#include <cmath>
 #include <vector>
 #include "../common.h"
+#include <experimental/filesystem>
+namespace fs = std::experimental::filesystem;
 
 class benchmark {
 
 public:
-    const bool write_;
-    const bool check_;
+    bool write_;
+    bool check_;
 
     benchmark(const bool in_write = false, const bool in_check = true) : write_(in_write), check_(in_check) {}
     virtual ~benchmark() {}
@@ -23,43 +25,93 @@ public:
     virtual void setup() = 0;
     virtual void teardown() = 0;
     virtual void run() = 0;
-    virtual size_t size_n() const = 0;
-    virtual void write() { std::cout << "Benchmark->wirte() not implemented.\n"; }
-    virtual void check() { std::cout << "Benchmark->check() not implemented.\n"; }
+    virtual size_t size() = 0;
+    virtual experimental::CbmStsDigi* output() = 0;
 
     virtual size_t bytes() { return 0; }
 
     virtual std::vector<float> timings() = 0;
 
-};
+    virtual void write() {
+        experimental::create_dir("output");
+        const experimental::CbmStsDigi* sorted = output();
 
-struct bench_result {
-    float min;
-    float max;
-    float median;
+        // +------------------------------------------------------------------------------+
+        // |                               Sorted output                                  |
+        // +------------------------------------------------------------------------------+
+        std::ofstream file;
+        file.open("output/" + name() + ".csv", std::ios::out | std::ios::trunc);
+        file << "index,address,channel,time\n";
+
+        for (int i = 0; i < size(); i++) {
+            file << i << "," << sorted[i].address << "," << sorted[i].channel << "," << sorted[i].time << "\n";
+        }
+
+        file.close();
+    }
+
+    virtual void check() {
+        const experimental::CbmStsDigi* sorted = output();
+
+        // Check if data is sorted.
+        bool ok = true;
+        unsigned int errorCount = 0;
+
+        // Start at second element and compare to previous for all i.
+        for (size_t i = 1; i < size(); i++) {
+            bool okThisRun = true;
+
+            const auto& curr = sorted[i];
+            const auto& prev = sorted[i - 1];
+
+            // Within the same address range, channel numbers increase.
+            if (curr.address == prev.address) {
+                ok &= curr.channel >= prev.channel;
+                okThisRun &= curr.channel >= prev.channel;
+                if (curr.channel == prev.channel) {
+                    ok &= curr.time >= prev.time;
+                    okThisRun &= curr.time >= prev.time;
+                }
+            }
+
+            if (!okThisRun) {
+                errorCount++;
+                std::cout << name() << " Error: " << "\n";
+                printf("(%lu/%lu): (%d, %d, %d)\n", i-1, size(), prev.address, prev.channel, prev.time);
+                printf("(%lu/%lu): (%d, %d, %d)\n", i, size(), curr.address, curr.channel, curr.time);
+            }
+        }
+
+        if (ok) {
+            std::cout << "Data is sorted!" << std::endl;
+        } else {
+            std::cout << "Error: Data is not sorted!" << "\n";
+            std::cout << "Error count: " << errorCount << "\n";
+        }
+    }
+
 };
 
 class benchmark_runner {
 
 public:
-    const std::string filename = "benchmark_results.csv";
     void add(benchmark* b) { benchmarks.emplace_back(b); }
 
     void run(int n) {
+        const std::string filename = "benchmark_results.csv";
+        const bool exists = experimental::file_exists(filename);
+
+        std::ofstream output;
+        output.open(filename, std::ios::out | std::ios_base::app);
+
+        if (!exists) { output << "n"; }
+        std::cout << "Writing benchmark results ..\n";
+
         for (auto& b: benchmarks) {
+            if (!exists) { output << "," << b.get()->name(); }
             run_benchmark(b.get(), n);
         }
-
-        results_csv.open(filename, std::ios::out | std::ios::app);
-
-        // Headers
-        if (experimental::file_empty(filename)) {
-            results_csv << "n";
-            for (int i=0; i < benchmarks.size(); i++) {
-                results_csv << "," << benchmarks[i].get()->name();
-            }
-            results_csv << "\n";
-        }
+        if (!exists) { output << "\n"; }
 
         print_entry("Benchmark");
         print_entry("Min");
@@ -67,19 +119,15 @@ public:
         print_entry("Median");
         std::cout << std::endl;
 
-        // Rows
-        results_csv << benchmarks[0].get()->size_n();
+        output << benchmarks[0].get()->size();
         for (auto& b: benchmarks) {
-            const auto res = results(b.get());
-            results_csv << "," << res.median;
-            //print_results(b.get());
+            output << "," << timings(b.get()).median;
+            print_results(b.get());
         }
-        results_csv << "\n";
-        results_csv.close();
+        output << "\n";
     }
 
 private:
-    std::ofstream results_csv;
     std::vector <std::unique_ptr<benchmark>> benchmarks;
 
     void run_benchmark(benchmark* b, const int r) {
@@ -96,45 +144,51 @@ private:
         b->teardown();
     }
 
-    bench_result results(benchmark* b) const {
+    struct timing_results {
+        float min;
+        float max;
+        float median;
+    };
+
+    timing_results timings(benchmark* b) {
         std::vector<float> timings = b->timings();
 
         timings.erase(timings.begin()); // discard warmup run
         std::sort(timings.begin(), timings.end());
 
-        print_entry(b->name());
-
         float min = timings.front();
         float max = timings.back();
         float median = timings[timings.size() / 2];
 
-        return bench_result{min, max, median};
+        return timing_results{min, max, median};
     }
 
     void print_results(benchmark* b) {
-        const auto result = results(b);
-        size_t bytes = b->bytes();
+        const auto times = timings(b);
+        const size_t bytes = b->bytes();
+
+        print_entry(b->name());
 
         std::stringstream ss;
         ss << std::fixed << std::setprecision(2);
 
-        ss << result.min << "ms";
+        ss << times.min << "ms";
         if (bytes > 0) {
-            ss << " (" << gb_s(bytes, result.min) << "GB/s)";
+            ss << " (" << gb_s(bytes, times.min) << "GB/s)";
         }
         print_entry(ss.str());
         ss.str("");
 
-        ss << result.max << "ms";
+        ss << times.max << "ms";
         if (bytes > 0) {
-            ss << " (" << gb_s(bytes, result.max) << "GB/s)";
+            ss << " (" << gb_s(bytes, times.max) << "GB/s)";
         }
         print_entry(ss.str());
         ss.str("");
 
-        ss << result.median << "ms";
+        ss << times.median << "ms";
         if (bytes > 0) {
-            ss << " (" << gb_s(bytes, result.median) << "GB/s)";
+            ss << " (" << gb_s(bytes, times.median) << "GB/s)";
         }
         print_entry(ss.str());
         ss.str("");

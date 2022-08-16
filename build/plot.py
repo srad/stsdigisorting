@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import math
 import numpy as np
+import os
+import sys
 
 with open("benchmark_results.csv") as fp:
     reader = csv.reader(fp, delimiter=",")
@@ -29,11 +31,17 @@ speedup = map(lambda x, y: max(float(x), 1.0) / max(float(y), 1.0), algo1, algo2
 plt.plot(n_in_millions, algo1, label = headers[1], linestyle="-")
 plt.plot(n_in_millions, algo2, label = headers[2], linestyle="--")
 
+plt.title("Device: " + os.getenv('XPU_DEVICE'))
 plt.xlabel("Digis (in millions)")
 plt.ylabel("ms")
 
 plt.legend()
-plt.savefig('runtimes.png')
+
+
+if not os.path.exists("./plots"):
+    os.makedirs("./plots")
+
+plt.savefig('./plots/' + sys.argv[1])
 
 plt.figure().clear()
 
@@ -41,4 +49,4 @@ plt.plot(n_in_millions, speedup, label = "Speedup", linestyle="-")
 
 plt.xlabel("Digis (in millions)")
 plt.ylabel("Speedup")
-plt.savefig('speedup.png')
+plt.savefig('./plots/' + sys.argv[2])
