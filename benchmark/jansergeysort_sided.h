@@ -92,9 +92,9 @@ public:
         xpu::copy(sideStartIndex, xpu::device_to_host);
         xpu::copy(sideEndIndex, xpu::device_to_host);
 
-        for(int i=0; i < bucket->size(); i++) {
-            printf("Bucket idx=%d front=(%d, %d) back=(%d, %d) \n", i, sideStartIndex.h()[2*i], sideEndIndex.h()[2*i], sideStartIndex.h()[2*i + 1], sideEndIndex.h()[2*i + 1]);
-        }
+        //for(int i=0; i < bucket->size(); i++) {
+        //    printf("Bucket idx=%d front=(%d, %d) back=(%d, %d) \n", i, sideStartIndex.h()[2*i], sideEndIndex.h()[2*i], sideStartIndex.h()[2*i + 1], sideEndIndex.h()[2*i + 1]);
+        //}
     }
 
     size_t size() override { return n; }

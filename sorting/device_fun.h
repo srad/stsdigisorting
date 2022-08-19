@@ -2,7 +2,7 @@
 
 #include <xpu/device.h>
 
-template<typename T>
+template<typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value, T>::type>
 XPU_D void prescan(T* data, T* temp) {
     const int n = experimental::channelCount;
     const int countOffset = 0;

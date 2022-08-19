@@ -25,7 +25,7 @@ algo1 = np.array(map(lambda x: x[1], data), dtype=np.float)
 algo2 = np.array(map(lambda x: x[2], data), dtype=np.float)
 algo3 = np.array(map(lambda x: x[3], data), dtype=np.float)
 
-speedup = map(lambda x, y: max(float(x), 1.0) / max(float(y), 1.0), algo1, algo2)
+speedup = np.array(map(lambda x, y: float(x) - float(y), algo1, algo2))
   
 # plot lines
 #plt.plot(n_in_millions, algo0, label = headers[1], linestyle="-")
@@ -47,8 +47,15 @@ plt.savefig('./plots/' + sys.argv[1], dpi=300)
 
 plt.figure().clear()
 
-plt.plot(n_in_millions, speedup, label = "Speedup", linestyle="-")
+fig, ax = plt.subplots()
 
-plt.xlabel("Digis (in millions)")
-plt.ylabel("Speedup")
+z = np.array([1.0] * len(n_in_millions))
+plt.plot(n_in_millions, speedup, linestyle="-")
+plt.fill_between(n_in_millions, speedup, 1.0, where=(speedup > z), alpha=0.20, facecolor="green", interpolate=True)
+plt.fill_between(n_in_millions, speedup, 1.0, where=(speedup < z), alpha=0.20, facecolor="red", interpolate=True)
+plt.axhline(y=1.0, color="green", linestyle="--")
+
+plt.title("Speedup JanSergeySort vs. BlockSort (median: " + ('%.2f' % np.median(speedup)) + "ms)")
+plt.xlabel("digis (in millions)")
+plt.ylabel("speedup (ms)")
 plt.savefig('./plots/' + sys.argv[2], dpi=300)

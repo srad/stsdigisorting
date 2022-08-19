@@ -11,7 +11,7 @@ struct JanSergeySortSmem {
     unsigned int temp[experimental::channelCount];
 };
 
-XPU_KERNEL(JanSergeySort, JanSergeySortSmem, const size_t n, const experimental::CbmStsDigi* digis, const int* startIndex, const int* endIndex, experimental::CbmStsDigi* output) {
+XPU_KERNEL(JanSergeySort, JanSergeySortSmem, const size_t n, const experimental::CbmStsDigi* digis, const int* startIndex, const int* endIndex, experimental::CbmStsDigi* output, unsigned int* sideStartIndex, unsigned int* sideEndIndex) {
     const int bucketIdx = xpu::block_idx::x();
     const int bucketStartIdx = startIndex[bucketIdx];
     const int bucketEndIdx = endIndex[bucketIdx];
@@ -37,7 +37,7 @@ XPU_KERNEL(JanSergeySort, JanSergeySortSmem, const size_t n, const experimental:
     // -----------------------------------------------------------------------------------------------------------
     // |3. Prefix sum: value[i] = sum(0, i-1) -> O(channelCount)
     // -----------------------------------------------------------------------------------------------------------
-    prescan(smem.countAndPrefixes, smem.temp);
+    //prescan(smem.countAndPrefixes, smem.temp);
 
     // Alternative:
     /*
@@ -52,7 +52,7 @@ XPU_KERNEL(JanSergeySort, JanSergeySortSmem, const size_t n, const experimental:
         }
     }
     */
-    xpu::barrier();
+    //xpu::barrier();
 
     // -----------------------------------------------------------------------------------------------------------
     // 4. Final sorting, place the elements in the correct position within the global output array: O(n)
@@ -61,9 +61,24 @@ XPU_KERNEL(JanSergeySort, JanSergeySortSmem, const size_t n, const experimental:
     // a digis into the same channel as a thread on the left. Might be handled by some algoritm, unclear yet.
     // -----------------------------------------------------------------------------------------------------------
     if (xpu::thread_idx::x() == 0) {
+        // TODO: replace by cub::DeviceScan::ExclusiveSum (https://nvlabs.github.io/cub/structcub_1_1_device_scan.html#a02b2d2e98f89f80813460f6a6ea1692b)
+        unsigned int sum = 0;
+        for (int i = 0; i < experimental::channelCount; i++) {
+            const auto tmp = smem.countAndPrefixes[i];
+            smem.countAndPrefixes[i] = sum;
+            sum += tmp;
+        }
+        
+        // Front
+        sideStartIndex[bucketIdx * 2] = bucketStartIdx;
+        sideEndIndex[  bucketIdx * 2] =  bucketStartIdx + smem.countAndPrefixes[1024] - 1;
+
+        // Back
+        sideStartIndex[bucketIdx * 2 + 1] = sideEndIndex[  bucketIdx * 2] + 1;
+        sideEndIndex[  bucketIdx * 2 + 1] = bucketEndIdx;
+
         for (int i = bucketStartIdx; i <= bucketEndIdx && i < n; i++) {
-            output[bucketStartIdx + smem.countAndPrefixes[digis[i].channel]] = digis[i];
-            smem.countAndPrefixes[digis[i].channel]++;
+            output[bucketStartIdx + (smem.countAndPrefixes[digis[i].channel]++)] = digis[i];
         }
     }
 }
