@@ -9,14 +9,13 @@
 #include <sstream>
 #include <vector>
 #include "../common.h"
-#include <experimental/filesystem>
-namespace fs = std::experimental::filesystem;
 
 class benchmark {
 
 public:
     bool write_;
     bool check_;
+    std::vector<double> timings_;
 
     benchmark(const bool in_write = false, const bool in_check = true) : write_(in_write), check_(in_check) {}
     virtual ~benchmark() {}
@@ -30,7 +29,7 @@ public:
 
     virtual size_t bytes() { return 0; }
 
-    virtual std::vector<float> timings() = 0;
+    virtual std::vector<double> timings() { return timings_; }
 
     virtual void write() {
         experimental::create_dir("output");
@@ -44,7 +43,7 @@ public:
         file << "index,address,channel,time\n";
 
         for (int i = 0; i < size(); i++) {
-            file << i << "," << sorted[i].address << "," << sorted[i].channel << "," << sorted[i].time << "\n";
+            file << i << "," << sorted[i].channel << "," << sorted[i].time << "\n";
         }
 
         file.close();
@@ -65,20 +64,16 @@ public:
             const auto& prev = sorted[i - 1];
 
             // Within the same address range, channel numbers increase.
-            if (curr.address == prev.address) {
-                ok &= curr.channel >= prev.channel;
-                okThisRun &= curr.channel >= prev.channel;
-                if (curr.channel == prev.channel) {
-                    ok &= curr.time >= prev.time;
-                    okThisRun &= curr.time >= prev.time;
-                }
+            if (curr.channel == prev.channel) {
+                ok &= curr.time >= prev.time;
+                okThisRun &= curr.time >= prev.time;
             }
 
             if (!okThisRun) {
                 errorCount++;
                 std::cout << name() << " Error: " << "\n";
-                printf("(%lu/%lu): (%d, %d, %d)\n", i-1, size(), prev.address, prev.channel, prev.time);
-                printf("(%lu/%lu): (%d, %d, %d)\n\n", i, size(), curr.address, curr.channel, curr.time);
+                printf("(%lu/%lu): (%d, %d)\n", i-1, size(), prev.channel, prev.time);
+                printf("(%lu/%lu): (%d, %d)\n\n", i, size(), curr.channel, curr.time);
             }
         }
 
@@ -152,7 +147,7 @@ private:
     };
 
     timing_results timings(benchmark* b) {
-        std::vector<float> timings = b->timings();
+        std::vector<double> timings = b->timings();
 
         timings.erase(timings.begin()); // discard warmup run
         std::sort(timings.begin(), timings.end());
@@ -171,25 +166,25 @@ private:
         print_entry(b->name());
 
         std::stringstream ss;
-        ss << std::fixed << std::setprecision(2);
+        ss << std::fixed << std::setprecision(5);
 
         ss << times.min << "ms";
         if (bytes > 0) {
-            ss << " (" << gb_s(bytes, times.min) << "GB/s)";
+            ss << " (" << gb_s(bytes, times.min) << " GB/s) ";
         }
         print_entry(ss.str());
         ss.str("");
 
         ss << times.max << "ms";
         if (bytes > 0) {
-            ss << " (" << gb_s(bytes, times.max) << "GB/s)";
+            ss << " (" << gb_s(bytes, times.max) << " GB/s) ";
         }
         print_entry(ss.str());
         ss.str("");
 
         ss << times.median << "ms";
         if (bytes > 0) {
-            ss << " (" << gb_s(bytes, times.median) << "GB/s)";
+            ss << " (" << gb_s(bytes, times.median) << " GB/s) ";
         }
         print_entry(ss.str());
         ss.str("");
@@ -197,7 +192,7 @@ private:
     }
 
     void print_entry(std::string entry) const {
-        std::cout << std::left << std::setw(25) << std::setfill(' ') << entry;
+        std::cout << std::left << std::setw(30) << std::setfill(' ') << entry;
     }
 
     float gb_s(size_t bytes, float ms) const {

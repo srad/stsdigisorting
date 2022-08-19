@@ -6,10 +6,11 @@
 #include "benchmark/blocksort.h"
 #include "benchmark/stdsort.h"
 #include "benchmark/jansergeysort.h"
-//#include "benchmark/jansergeysort_hip.h"
+#include "benchmark/jansergeysort_sided.h"
 
 #include "sorting/SortKernel.h"
 #include "sorting/JanSergeySort.h"
+#include "sorting/JanSergeySortSided.h"
 
 int main(int argc, char** argv) {
     try {
@@ -51,7 +52,7 @@ int main(int argc, char** argv) {
         std::cout << "CSV loaded." << "\n\n";
 
         // Copy digis to raw array.
-        experimental::CbmStsDigi* aDigis = new experimental::CbmStsDigi[vDigis.size()];
+        experimental::CbmStsDigiInput* aDigis = new experimental::CbmStsDigiInput[vDigis.size()];
         const size_t n = vDigis.size();
         std::copy(vDigis.begin(), vDigis.end(), aDigis);
         std::cout << "Copied array of size: " << n << "\n\n";
@@ -69,6 +70,7 @@ int main(int argc, char** argv) {
         if (xpu::active_driver() != xpu::cpu) {
             std::cout << "Using GPU.\n\n";
             runner.add(new jansergeysort_bench<JanSergeySort>(aDigis, n, writeOutput, checkResult));
+            runner.add(new jansergeysort_sided_bench<JanSergeySortSided>(aDigis, n, writeOutput, checkResult, 2));
         } else {
             // Only on
             runner.add(new stdsort_bench(aDigis, n, writeOutput, checkResult));

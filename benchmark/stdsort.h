@@ -14,12 +14,11 @@
 class stdsort_bench : public benchmark {
 
     const size_t n;
-    experimental::CbmStsDigi* digis;
+    experimental::CbmStsDigiInput* digis;
     experimental::CbmStsDigi* sorted;
-    std::vector<float> executionTimeMs;
 
 public:
-    stdsort_bench(const experimental::CbmStsDigi* in_digis, const size_t in_n, const bool write = false, const bool check = true) : n(in_n), digis(new experimental::CbmStsDigi[in_n]), sorted(new experimental::CbmStsDigi[in_n]), benchmark(write, check) {
+    stdsort_bench(const experimental::CbmStsDigiInput* in_digis, const size_t in_n, const bool write = false, const bool check = true) : n(in_n), digis(new experimental::CbmStsDigiInput[in_n]), sorted(new experimental::CbmStsDigi[in_n]), benchmark(write, check) {
         std::copy(in_digis, in_digis + n, digis);
     }
 
@@ -28,10 +27,7 @@ public:
 
     std::string name() { return "std_sort"; }
 
-    void setup() {
-        // Copy for each run a fresh output original digi array.
-        std::copy(digis, digis + n, sorted);
-    }
+    void setup() {}
 
     void teardown() {
         delete[] digis;
@@ -39,6 +35,11 @@ public:
     }
 
     void run() {
+        // Copy for each run a fresh output original digi array.
+        for (int i=0; i < n; i++) {
+            sorted[i] = experimental::CbmStsDigi(digis[i].channel, digis[i].time);
+        }
+
         auto started = std::chrono::high_resolution_clock::now();
 
         std::sort(sorted, sorted + n, [](const experimental::CbmStsDigi& a, const experimental::CbmStsDigi& b) {
@@ -46,7 +47,7 @@ public:
         });
 
         auto done = std::chrono::high_resolution_clock::now();
-        executionTimeMs.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(done - started).count());
+        timings_.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(done - started).count());
     }
 
     size_t size() override { return n; }
@@ -54,7 +55,5 @@ public:
     experimental::CbmStsDigi* output() override { return sorted; }
 
     size_t bytes() { return n * sizeof(experimental::CbmStsDigi); }
-
-    std::vector<float> timings() { return executionTimeMs; }
 
 };

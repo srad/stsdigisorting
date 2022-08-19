@@ -21,8 +21,9 @@ n_in_millions = map(lambda x:  int(x[0]) / 1000000, data)
 
 
 #algo0 = np.array(map(lambda x: x[1], data), dtype=np.int)
-algo1 = np.array(map(lambda x: x[1], data), dtype=np.int)
-algo2 = np.array(map(lambda x: x[2], data), dtype=np.int)
+algo1 = np.array(map(lambda x: x[1], data), dtype=np.float)
+algo2 = np.array(map(lambda x: x[2], data), dtype=np.float)
+algo3 = np.array(map(lambda x: x[3], data), dtype=np.float)
 
 speedup = map(lambda x, y: max(float(x), 1.0) / max(float(y), 1.0), algo1, algo2)
   
@@ -30,6 +31,7 @@ speedup = map(lambda x, y: max(float(x), 1.0) / max(float(y), 1.0), algo1, algo2
 #plt.plot(n_in_millions, algo0, label = headers[1], linestyle="-")
 plt.plot(n_in_millions, algo1, label = headers[1], linestyle="-")
 plt.plot(n_in_millions, algo2, label = headers[2], linestyle="--")
+plt.plot(n_in_millions, algo3, label = headers[3], linestyle=":")
 
 plt.title("Median runtime on device '" + os.getenv('XPU_DEVICE') + "'")
 plt.xlabel("Digis (in millions)")

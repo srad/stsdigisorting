@@ -18,7 +18,7 @@ class blocksort_bench : public benchmark {
 
     // This is an internal copy of the unsorted digis
     // which is copied to run the sort benchmark repeatedly.
-    experimental::CbmStsDigi* digis;
+    experimental::CbmStsDigiInput* digis;
     experimental::CbmStsDigi* sorted;
     experimental::CbmStsDigiBucket* bucket;
 
@@ -30,10 +30,8 @@ class blocksort_bench : public benchmark {
     xpu::hd_buffer<int> buffStartIndex;
     xpu::hd_buffer<int> buffEndIndex;
 
-    std::vector<float> timings_;
-
 public:
-    blocksort_bench(const experimental::CbmStsDigi* in_digis, const size_t in_n, const bool in_write = false, const bool in_check = true) : n(in_n), sorted(new experimental::CbmStsDigi[in_n]), digis(new experimental::CbmStsDigi[in_n]), benchmark(in_write, in_check) {
+    blocksort_bench(const experimental::CbmStsDigiInput* in_digis, const size_t in_n, const bool in_write = false, const bool in_check = true) : n(in_n), sorted(new experimental::CbmStsDigi[in_n]), digis(new experimental::CbmStsDigiInput[in_n]), benchmark(in_write, in_check) {
         // Create an internal copy of the digis.
         std::copy(in_digis, in_digis + in_n, digis);
         elems_per_block = n / n_blocks;
@@ -41,7 +39,7 @@ public:
 
     ~blocksort_bench() {}
 
-    std::string name() { return "BlockSort"; }
+    std::string name() { return xpu::get_name<Kernel>(); }
 
     void setup() {
         devOutput = xpu::device_malloc<experimental::CbmStsDigi*>(n);
@@ -67,15 +65,15 @@ public:
         xpu::copy(buffStartIndex, xpu::host_to_device);
         xpu::copy(buffEndIndex, xpu::host_to_device);
 
-        const auto started = std::chrono::high_resolution_clock::now();
+        auto t0 = std::chrono::high_resolution_clock::now();  
 
         // const experimental::CbmStsDigi* data, const int* startIndex, const int* endIdex, experimental::CbmStsDigi* buf, experimental::CbmStsDigi** out, const size_t numElems
         xpu::run_kernel<Kernel>(xpu::grid::n_blocks(bucket->size()), buffDigis.d(), buffStartIndex.d(), buffEndIndex.d(), devBuffer, devOutput, n);
 
-        const auto done = std::chrono::high_resolution_clock::now();
-        const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(done - started).count();
-        // std::cout << name() << " ms: " << ms << "\n";
-        timings_.push_back(ms);
+        const auto t1 = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double, std::milli> fp_ms = t1 - t0;
+        const auto durationMS = fp_ms.count();
+        timings_.push_back(durationMS);
 
         // Get the buffer that contains the sorted data.
         experimental::CbmStsDigi* hostOutput = nullptr;
@@ -99,7 +97,5 @@ public:
     }
 
     size_t bytes() { return n * sizeof(experimental::CbmStsDigi); }
-
-    std::vector<float> timings() { return timings_; }
 
 };

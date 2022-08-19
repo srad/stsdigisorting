@@ -13,6 +13,9 @@ xpu_attach(SortKernel sorting/SortKernel.cpp)
 add_library(JanSergeySort SHARED sorting/JanSergeySort.cpp)
 xpu_attach(JanSergeySort sorting/JanSergeySort.cpp)
 
+add_library(JanSergeySortSided SHARED sorting/JanSergeySortSided.cpp)
+xpu_attach(JanSergeySortSided sorting/JanSergeySortSided.cpp)
+
 # add the executable
 add_executable(stsdigisort main.cpp)
-target_link_libraries(stsdigisort xpu SortKernel JanSergeySort)
+target_link_libraries(stsdigisort xpu SortKernel JanSergeySort JanSergeySortSided)

@@ -6,7 +6,16 @@
 
 namespace experimental {
 
-    class CbmStsDigi {
+    struct CbmStsDigi {
+        int channel;
+        int time;
+
+        CbmStsDigi(int in_channel, int in_time) : channel(in_channel), time(in_time) {}
+        CbmStsDigi() = default;
+        ~CbmStsDigi() = default;
+    };
+
+    class CbmStsDigiInput {
     public:
         // address,system,unit,ladder,half-ladder,module,sensor,side,channel,time
         int address;
@@ -21,9 +30,9 @@ namespace experimental {
         int channel;
         int time;
 
-        CbmStsDigi() = default;
+        CbmStsDigiInput() = default;
 
-        CbmStsDigi(int in_address, int in_system, int in_unit, int in_ladder, int in_half_ladder, int in_module, int in_sensor, int in_side, int in_channel, int in_time) : address(in_address), system(in_system), unit(in_unit), ladder(in_ladder), half_ladder(in_half_ladder), module(in_module), sensor(in_sensor), side(in_side), channel(in_channel), time(in_time) {}
+        CbmStsDigiInput(int in_address, int in_system, int in_unit, int in_ladder, int in_half_ladder, int in_module, int in_sensor, int in_side, int in_channel, int in_time) : address(in_address), system(in_system), unit(in_unit), ladder(in_ladder), half_ladder(in_half_ladder), module(in_module), sensor(in_sensor), side(in_side), channel(in_channel), time(in_time) {}
 
         std::string to_string() { return "(address: " + to_zero_lead(address, 10) + ", channel: " + to_zero_lead(channel, 4) + ", time: " + to_zero_lead(time, 5) + ")"; }
 
@@ -41,29 +50,29 @@ namespace experimental {
     /// -as is- to the GPU for further computation.
     /// </summary>
     class CbmStsDigiBucket {
-        int* addresses_;
-        std::unordered_map<int, int> addressCounter; // O(1)
+        unsigned int* addresses_;
+        std::unordered_map<unsigned int, unsigned int> addressCounter; // O(1)
 
         /// <summary>
         /// Die Vector is NOT sorted, this is just the order that the digi addresses first appeared.
         /// Just used for the array layout to place the elements in a certain order. Which order is irrelevant.
         /// </summary>
-        std::vector<int> addressOrder;
+        std::vector<unsigned int> addressOrder;
 
-        std::unordered_map<int, int> prefixSum;
-        CbmStsDigi* input;
+        std::unordered_map<unsigned int, unsigned int> prefixSum;
+        CbmStsDigiInput* input;
         size_t n_;
-        int bucketCount_;
+        unsigned int bucketCount_;
 
     public:
         // Contains after construction the bucket with digis.
         CbmStsDigi* digis;
 
         // Start and end indexes (not size) of digis.
-        int* startIndex;
-        int* endIndex;
+        unsigned int* startIndex;
+        unsigned int* endIndex;
 
-        CbmStsDigiBucket(const CbmStsDigi* in_digis, const size_t in_n) : n_(in_n), digis(new CbmStsDigi[in_n]), input(new CbmStsDigi[in_n]) {
+        CbmStsDigiBucket(const CbmStsDigiInput* in_digis, const size_t in_n) : n_(in_n), digis(new CbmStsDigi[in_n]), input(new CbmStsDigiInput[in_n]) {
             std::copy(in_digis, in_digis + in_n, input);
             createBuckets();
         }
@@ -78,19 +87,19 @@ namespace experimental {
 
         CbmStsDigi& operator[](int i) { return digis[i]; }
 
-        int size() const { return bucketCount_; }
+        unsigned int size() const { return bucketCount_; }
 
         size_t n() const { return n_; }
 
-        int* address() const { return addresses_; }
+        unsigned int* address() const { return addresses_; }
 
-        int getAddress(const int i) const { return addresses_[i]; }
+        unsigned int getAddress(const int i) const { return addresses_[i]; }
 
-        int begin(const int i) const { return startIndex[i]; }
+        unsigned int begin(const int i) const { return startIndex[i]; }
 
-        int end(const int i) const { return endIndex[i]; }
+        unsigned int end(const int i) const { return endIndex[i]; }
 
-        std::string to_index_string(int i) { return "(address: " + std::to_string(addresses_[i]) + ", start-idx: " + std::to_string(startIndex[i]) + ", end-idx:" + std::to_string(endIndex[i]) + ")"; }
+        std::string to_index_string(unsigned int i) { return "(address: " + std::to_string(addresses_[i]) + ", start-idx: " + std::to_string(startIndex[i]) + ", end-idx:" + std::to_string(endIndex[i]) + ")"; }
 
     private:
         /// <summary>
@@ -119,9 +128,9 @@ namespace experimental {
             }
 
             // 3. Compute start and end indexes: O(addressOrder.size()) -> small.
-            addresses_ = new int[addressOrder.size()];
-            startIndex = new int[addressOrder.size()];
-            endIndex = new int[addressOrder.size()];
+            addresses_ = new unsigned int[addressOrder.size()];
+            startIndex = new unsigned int[addressOrder.size()];
+            endIndex = new unsigned int[addressOrder.size()];
             bucketCount_ = addressOrder.size();
 
             for (int i = 0; i < addressOrder.size(); i++) {
@@ -133,7 +142,7 @@ namespace experimental {
             // 4. Place in virtual buckets in the flat array.
             // Copy elements to the right location
             for (int i = 0; i < n_; i++) {
-                digis[prefixSum[input[i].address]++] = input[i];
+                digis[prefixSum[input[i].address]++] = CbmStsDigi(input[i].channel, input[i].time);
             }
         }
     };
