@@ -99,14 +99,20 @@ public:
         std::ofstream output;
         output.open(filename, std::ios::out | std::ios_base::app);
 
-        if (!exists) { output << "n"; }
+        std::ofstream tp;
+        tp.open("benchmark_tp.csv", std::ios::out | std::ios_base::app);
+
+        if (!exists) { output << "n"; tp << "n"; }
         std::cout << "Writing benchmark results ..\n";
 
         for (auto& b: benchmarks) {
-            if (!exists) { output << "," << b.get()->name(); }
+            if (!exists) {
+                output << "," << b.get()->name();
+                tp << "," << b.get()->name();
+            }
             run_benchmark(b.get(), n);
         }
-        if (!exists) { output << "\n"; }
+        if (!exists) { output << "\n"; tp << "\n"; }
 
         print_entry("Benchmark");
         print_entry("Min");
@@ -115,11 +121,17 @@ public:
         std::cout << std::endl;
 
         output << benchmarks[0].get()->size();
+        tp << benchmarks[0].get()->size();
         for (auto& b: benchmarks) {
             output << "," << timings(b.get()).median;
+            tp << "," << get_throughput(b.get());
             print_results(b.get());
         }
         output << "\n";
+        tp << "\n";
+
+        output.close();
+        tp.close();
     }
 
 private:
@@ -157,6 +169,12 @@ private:
         float median = timings[timings.size() / 2];
 
         return timing_results{min, max, median};
+    }
+
+    float get_throughput(benchmark* b) {
+        const auto times = timings(b);
+        const size_t bytes = b->bytes();
+        return gb_s(bytes, times.median);
     }
 
     void print_results(benchmark* b) {

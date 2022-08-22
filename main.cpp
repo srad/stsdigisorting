@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
         if (xpu::active_driver() != xpu::cpu) {
             std::cout << "Using GPU.\n\n";
             runner.add(new jansergeysort_bench<JanSergeySort>(aDigis, n, writeOutput, checkResult));
-            runner.add(new jansergeysort_sided_bench<JanSergeySortSided>(aDigis, n, writeOutput, checkResult, 2));
+            //runner.add(new jansergeysort_sided_bench<JanSergeySortSided>(aDigis, n, writeOutput, checkResult, 2));
         } else {
             // Only on
             runner.add(new stdsort_bench(aDigis, n, writeOutput, checkResult));

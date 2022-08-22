@@ -47,3 +47,57 @@ XPU_D void prescan(T* data, T* temp) {
      data[countOffset + 2 * thid] = temp[2 * thid]; // write results to device memory
      data[countOffset + 2 * thid + 1] = temp[2 * thid + 1];
 }
+
+constexpr int sideSeperator = 1024;
+
+XPU_D int binary_search(experimental::CbmStsDigi* list, int length, int to_be_found){
+    int p = 0;
+    int r = length - 1;
+    int q = (r + p) / 2;
+    int counter = 0;
+
+    while (p <= r) {
+        counter++;
+        if (list[q].channel == to_be_found) {
+            return q;
+        }
+        else {
+            if (list[q].channel <= to_be_found) {
+                p = q + 1;
+                q = (r + p) / 2;
+            }
+            else {
+                r = q - 1;
+                q = (r + p) / 2;    
+            }
+        }
+    }
+    return -1;
+}
+
+// See: https://stackoverflow.com/questions/6553970/find-the-first-element-in-a-sorted-array-that-is-greater-than-the-target
+XPU_D int findSideSeperatorIndex(const experimental::CbmStsDigi* arr, const int n, const int target) {
+    int low = 0;
+    int high = n;
+
+    while (low != high) {
+        int mid = (low + high) / 2;
+
+        if (arr[mid].channel <= target) {
+            /* This index, and everything below it, must not be the first element
+            * greater than what we're looking for because this element is no greater
+            * than the element.
+            */
+            low = mid + 1;
+        }
+        else {
+            /* This element is at least as large as the element, so anything after it can't
+            * be the first element that's at least as large.
+            */
+            high = mid;
+        }
+    }
+
+    /* Now, low and high both point to the element in question. */
+    return high;
+}

@@ -8,8 +8,12 @@ XPU_IMAGE(JanSergeySortKernel);
 
 struct JanSergeySortSmem {
     unsigned int countAndPrefixes[experimental::channelCount];
-    unsigned int temp[experimental::channelCount];
+    //unsigned int temp[experimental::channelCount];
+    //unsigned int output[experimental::channelCount];
 };
+
+constexpr int TPB = 128;
+constexpr int IPT = experimental::channelCount / TPB;
 
 XPU_KERNEL(JanSergeySort, JanSergeySortSmem, const size_t n, const experimental::CbmStsDigi* digis, const int* startIndex, const int* endIndex, experimental::CbmStsDigi* output, unsigned int* sideStartIndex, unsigned int* sideEndIndex) {
     const int bucketIdx = xpu::block_idx::x();

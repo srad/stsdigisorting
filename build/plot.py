@@ -16,46 +16,99 @@ with open("benchmark_results.csv") as fp:
     headers = reader.next()
     data = [row for row in reader]
 
+n_in_millions = map(lambda x:  int(x[0]) / 100000, data)
 
-n_in_millions = map(lambda x:  int(x[0]) / 1000000, data)
+algo = []
+n = len(headers)
 
+for i in range(1, n):
+    algo.append(np.array(map(lambda x: x[i], data), dtype=np.float))
 
-#algo0 = np.array(map(lambda x: x[1], data), dtype=np.int)
-algo1 = np.array(map(lambda x: x[1], data), dtype=np.float)
-algo2 = np.array(map(lambda x: x[2], data), dtype=np.float)
-algo3 = np.array(map(lambda x: x[3], data), dtype=np.float)
+speedup = np.array(map(lambda x, y: float(x) - float(y), algo[0], algo[1]))
+speedup_percent = np.array(map(lambda x, y: (float(x) - float(y)) / float(x) * 100, algo[0], algo[1]))
 
-speedup = np.array(map(lambda x, y: float(x) - float(y), algo1, algo2))
-  
-# plot lines
-#plt.plot(n_in_millions, algo0, label = headers[1], linestyle="-")
-plt.plot(n_in_millions, algo1, label = headers[1], linestyle="-")
-plt.plot(n_in_millions, algo2, label = headers[2], linestyle="--")
-plt.plot(n_in_millions, algo3, label = headers[3], linestyle=":")
+for i in range(1, n):
+    plt.plot(n_in_millions, algo[i-1], label = headers[i])
+
+# ------------------------------------------------------------------------------------------
+# 1. Runtime 
+# ------------------------------------------------------------------------------------------
 
 plt.title("Median runtime on device '" + os.getenv('XPU_DEVICE') + "'")
-plt.xlabel("Digis (in millions)")
+plt.xlabel("Digis (10^5)")
 plt.ylabel("ms")
 
 plt.legend()
-
 
 if not os.path.exists("./plots"):
     os.makedirs("./plots")
 
 plt.savefig('./plots/' + sys.argv[1], dpi=300)
 
+# ------------------------------------------------------------------------------------------
+# 2. Speedup ms
+# ------------------------------------------------------------------------------------------
+
 plt.figure().clear()
 
 fig, ax = plt.subplots()
 
-z = np.array([1.0] * len(n_in_millions))
+z = np.array([0.0] * len(n_in_millions))
 plt.plot(n_in_millions, speedup, linestyle="-")
-plt.fill_between(n_in_millions, speedup, 1.0, where=(speedup > z), alpha=0.20, facecolor="green", interpolate=True)
-plt.fill_between(n_in_millions, speedup, 1.0, where=(speedup < z), alpha=0.20, facecolor="red", interpolate=True)
-plt.axhline(y=1.0, color="green", linestyle="--")
+plt.fill_between(n_in_millions, speedup, 0.0, where=(speedup > z), alpha=0.20, facecolor="green", interpolate=True)
+plt.fill_between(n_in_millions, speedup, 0.0, where=(speedup < z), alpha=0.20, facecolor="red", interpolate=True)
+plt.axhline(y=0.0, color="green", linestyle="--")
 
 plt.title("Speedup JanSergeySort vs. BlockSort (median: " + ('%.2f' % np.median(speedup)) + "ms)")
-plt.xlabel("digis (in millions)")
+plt.xlabel("digis (10^5)")
 plt.ylabel("speedup (ms)")
 plt.savefig('./plots/' + sys.argv[2], dpi=300)
+
+# ------------------------------------------------------------------------------------------
+# 3. Speedup %
+# ------------------------------------------------------------------------------------------
+
+plt.figure().clear()
+
+fig, ax = plt.subplots()
+
+z = np.array([0.0] * len(n_in_millions))
+plt.plot(n_in_millions, speedup_percent, linestyle="-")
+plt.fill_between(n_in_millions, speedup_percent, 0.0, where=(speedup_percent > z), alpha=0.20, facecolor="green", interpolate=True)
+plt.fill_between(n_in_millions, speedup_percent, 0.0, where=(speedup_percent < z), alpha=0.20, facecolor="red", interpolate=True)
+plt.axhline(y=0.0, color="green", linestyle="--")
+
+plt.title("Speedup JanSergeySort vs. BlockSort (median: " + ('%.2f' % np.median(speedup_percent)) + "%)")
+plt.xlabel("digis (10^5)")
+plt.ylabel("speedup (%)")
+plt.savefig('./plots/' + sys.argv[3], dpi=300)
+
+# ------------------------------------------------------------------------------------------
+# 4. Throughput
+# ------------------------------------------------------------------------------------------
+
+plt.figure().clear()
+
+with open("benchmark_tp.csv") as fp:
+    reader = csv.reader(fp, delimiter=",")
+    #next(reader, None)  # skip the headers
+    headers_tp = reader.next()
+    data_tp = [row for row in reader]
+
+algo = []
+n = len(headers_tp)
+
+for i in range(1, n):
+    algo.append(np.array(map(lambda x: x[i], data_tp), dtype=np.float))
+
+speedup = np.array(map(lambda x, y: x - y, algo[0], algo[1]))
+
+for i in range(1, n):
+    plt.plot(n_in_millions, algo[i-1], label = headers_tp[i])
+
+plt.title("Median throughput on device '" + os.getenv('XPU_DEVICE') + "'")
+plt.xlabel("Digis (10^5)")
+plt.ylabel("GB/s")
+plt.legend()
+
+plt.savefig('./plots/' + sys.argv[4], dpi=300)

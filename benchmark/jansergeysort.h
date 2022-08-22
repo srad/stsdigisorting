@@ -64,6 +64,8 @@ public:
         delete bucket;
         buffDigis.reset();
         buffOutput.reset();
+        sideStartIndex.reset();
+        sideEndIndex.reset();
     }
 
     size_t size_n() const { return n; }
