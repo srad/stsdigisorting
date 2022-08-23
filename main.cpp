@@ -6,11 +6,9 @@
 #include "benchmark/blocksort.h"
 #include "benchmark/stdsort.h"
 #include "benchmark/jansergeysort.h"
-#include "benchmark/jansergeysort_sided.h"
 
-#include "sorting/SortKernel.h"
+#include "sorting/BlockSort.h"
 #include "sorting/JanSergeySort.h"
-#include "sorting/JanSergeySortSided.h"
 
 int main(int argc, char** argv) {
     try {
@@ -78,6 +76,7 @@ int main(int argc, char** argv) {
         }
 
         runner.run(10);
+
         delete[] aDigis;
     }
     catch (std::exception& e) {

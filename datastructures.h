@@ -6,6 +6,17 @@
 
 namespace experimental {
 
+    using index_t = unsigned int;
+    using count_t = unsigned int;
+    using address_t = unsigned int;
+    using address_counter_t = std::unordered_map<address_t, count_t>;
+
+    // For the index calculation we need to know for each address bucket, how many
+    // digis are of channel < 1024. Then the layout is known:
+    // [bucket_start_index .. front_end_index back_start_index .. bucket_end_index]
+    // front_end_index = number of digis in bucket with channel < 1024.
+    using channel_side_counter_t = std::unordered_map<address_t, std::array<count_t, 2>>;
+
     struct CbmStsDigi {
         int channel;
         int time;
@@ -15,8 +26,7 @@ namespace experimental {
         ~CbmStsDigi() = default;
     };
 
-    class CbmStsDigiInput {
-    public:
+    struct CbmStsDigiInput {
         // address,system,unit,ladder,half-ladder,module,sensor,side,channel,time
         int address;
         int system;
@@ -25,8 +35,8 @@ namespace experimental {
         int half_ladder;
         int module;
         int sensor;
-        int side; // aufteilung in doppelte blockzahl und vorder/r�ckseite getrennt bearbeiten
-        // alle channels >= 1024 sind die r�ckseite. -> blocks verdoppeln
+        int side; // aufteilung in doppelte blockzahl und vorder/rückseite getrennt bearbeiten
+        // alle channels >= 1024 sind die rückseite. -> blocks verdoppeln
         int channel;
         int time;
 
@@ -50,27 +60,35 @@ namespace experimental {
     /// -as is- to the GPU for further computation.
     /// </summary>
     class CbmStsDigiBucket {
-        unsigned int* addresses_;
-        std::unordered_map<unsigned int, unsigned int> addressCounter; // O(1)
+        address_t* addresses_;
+        address_counter_t addressCounter;
+        channel_side_counter_t channelSideCounter;
+
+        const unsigned int front = 0;
+        const unsigned int back = 1;
+
+        // Doppelte bucket anzahl, vor/rückseite
 
         /// <summary>
         /// Die Vector is NOT sorted, this is just the order that the digi addresses first appeared.
         /// Just used for the array layout to place the elements in a certain order. Which order is irrelevant.
         /// </summary>
-        std::vector<unsigned int> addressOrder;
+        std::vector<count_t> addressOrder;
 
-        std::unordered_map<unsigned int, unsigned int> prefixSum;
+        std::unordered_map<address_t, count_t> addressStartIndex;
         CbmStsDigiInput* input;
         size_t n_;
-        unsigned int bucketCount_;
+        count_t bucketCount_;
 
     public:
         // Contains after construction the bucket with digis.
         CbmStsDigi* digis;
 
         // Start and end indexes (not size) of digis.
-        unsigned int* startIndex;
-        unsigned int* endIndex;
+        index_t* startIndex;
+        index_t* endIndex;
+
+        index_t* channelSplitIndex;
 
         CbmStsDigiBucket(const CbmStsDigiInput* in_digis, const size_t in_n) : n_(in_n), digis(new CbmStsDigi[in_n]), input(new CbmStsDigiInput[in_n]) {
             std::copy(in_digis, in_digis + in_n, input);
@@ -83,66 +101,97 @@ namespace experimental {
             delete[] startIndex;
             delete[] endIndex;
             delete[] addresses_;
+            delete[] channelSplitIndex;
         }
 
         CbmStsDigi& operator[](int i) { return digis[i]; }
 
-        unsigned int size() const { return bucketCount_; }
+        count_t size() const { return bucketCount_; }
 
         size_t n() const { return n_; }
 
-        unsigned int* address() const { return addresses_; }
+        address_t* address() const { return addresses_; }
 
-        unsigned int getAddress(const int i) const { return addresses_[i]; }
+        address_t getAddress(const int i) const { return addresses_[i]; }
 
-        unsigned int begin(const int i) const { return startIndex[i]; }
+        index_t begin(const int i) const { return startIndex[i]; }
 
-        unsigned int end(const int i) const { return endIndex[i]; }
+        index_t end(const int i) const { return endIndex[i]; }
 
-        std::string to_index_string(unsigned int i) { return "(address: " + std::to_string(addresses_[i]) + ", start-idx: " + std::to_string(startIndex[i]) + ", end-idx:" + std::to_string(endIndex[i]) + ")"; }
+        index_t frontBegin(const int i) const { return begin(i); }
+        index_t frontEnd(const int i) const { return channelSplitIndex[i]; }
+
+        index_t backBegin(const int i) const { return channelSplitIndex[i] + 1; }
+        index_t backEnd(const int i) const { return end(i); }
+
+        std::string to_index_string(index_t i) { return "(address: " + std::to_string(addresses_[i]) + ", start-idx: " + std::to_string(startIndex[i]) + ", end-idx:" + std::to_string(endIndex[i]) + ")"; }
 
     private:
         /// <summary>
         /// Takes O(n) = 2*O(n) + 2*O(addressCount)
         /// </summary>
         void createBuckets() {
+
+            // -----------------------------------------------------------------------------------
             // 1. Init to zero and count addresses.
-            for (int i = 0; i < n_; i++) {
+            // -----------------------------------------------------------------------------------
+            for (int i = 0; i < n_; i++) {                
                 // Init map entries.
                 if (addressCounter.find(input[i].address) == addressCounter.end()) {
                     addressCounter[input[i].address] = 0;
-                    prefixSum[input[i].address] = 0;
-                    // Just for simpler and quicker traversal.
-                    addressOrder.push_back(input[i].address);
-                }
-                addressCounter[input[i].address] += 1;
-            }
+                    addressStartIndex[input[i].address] = 0;
 
-            // 2. Prefix sum per address. O(addressOrder.size()) -> small.
+                    // Just take the addresses just in the order they first appear to use them as buckets.
+                    addressOrder.push_back(input[i].address);
+
+                    channelSideCounter[input[i].address] = { 0 };
+                }
+
+                addressCounter[input[i].address]++;
+                
+                // The front index starts always at addressStartIndex + 0++,
+                // only the back is offset by the number of indexes at the front.
+                channelSideCounter[input[i].address][back] += (input[i].channel < 1024) * 1;
+            }
+            
+            // -----------------------------------------------------------------------------------
+            // 2. Excluside sum sum per address. O(addressOrder.size()) -> small.
+            // -----------------------------------------------------------------------------------
             int sum = 0;
             // The address of the first element is = 0.
             for (int i = 0; i < addressOrder.size(); i++) {
-                prefixSum[addressOrder[i]] = sum;
-                sum += addressCounter[addressOrder[i]];
-                //std::cout << ", address: " << address << ", prefixSum: " << prefixSum[addressOrder[i]] << ", count: " << addressCounter[addressOrder[i]] << "\n";
+                const address_t address = addressOrder[i];
+
+                addressStartIndex[address] = sum;
+                sum += addressCounter[address];
             }
 
+            // -----------------------------------------------------------------------------------
             // 3. Compute start and end indexes: O(addressOrder.size()) -> small.
-            addresses_ = new unsigned int[addressOrder.size()];
-            startIndex = new unsigned int[addressOrder.size()];
-            endIndex = new unsigned int[addressOrder.size()];
+            // -----------------------------------------------------------------------------------
+            addresses_ = new index_t[addressOrder.size()];
+
+            startIndex = new index_t[addressOrder.size()];
+            endIndex = new index_t[addressOrder.size()];
+
+            // At which index start all digis with channel > 1024.
+            channelSplitIndex = new index_t[addressOrder.size()];
+
             bucketCount_ = addressOrder.size();
 
             for (int i = 0; i < addressOrder.size(); i++) {
                 addresses_[i] = addressOrder[i];
-                startIndex[i] = prefixSum[addressOrder[i]];
-                endIndex[i] = prefixSum[addressOrder[i]] + addressCounter[addressOrder[i]] - 1;
+                startIndex[i] = addressStartIndex[addressOrder[i]];
+                endIndex[i] = startIndex[i] + addressCounter[addressOrder[i]] - 1;
+                channelSplitIndex[i] = startIndex[i] + channelSideCounter[addresses_[i]][back];
             }
 
+            // -----------------------------------------------------------------------------------
             // 4. Place in virtual buckets in the flat array.
             // Copy elements to the right location
+            // -----------------------------------------------------------------------------------
             for (int i = 0; i < n_; i++) {
-                digis[prefixSum[input[i].address]++] = CbmStsDigi(input[i].channel, input[i].time);
+                digis[addressStartIndex[input[i].address] + (channelSideCounter[input[i].address][(input[i].channel >= 1024)]++)] = CbmStsDigi(input[i].channel, input[i].time);
             }
         }
     };

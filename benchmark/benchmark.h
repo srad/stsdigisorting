@@ -15,7 +15,7 @@ class benchmark {
 public:
     bool write_;
     bool check_;
-    std::vector<double> timings_;
+    std::vector<float> timings_;
 
     benchmark(const bool in_write = false, const bool in_check = true) : write_(in_write), check_(in_check) {}
     virtual ~benchmark() {}
@@ -29,7 +29,7 @@ public:
 
     virtual size_t bytes() { return 0; }
 
-    virtual std::vector<double> timings() { return timings_; }
+    virtual std::vector<float> timings() { return timings_; }
 
     virtual void write() {
         experimental::create_dir("output");
@@ -159,7 +159,7 @@ private:
     };
 
     timing_results timings(benchmark* b) {
-        std::vector<double> timings = b->timings();
+        std::vector<float> timings = b->timings();
 
         timings.erase(timings.begin()); // discard warmup run
         std::sort(timings.begin(), timings.end());

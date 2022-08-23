@@ -13,7 +13,7 @@ template<typename Kernel>
 class jansergeysort_bench : public benchmark {
 
     const size_t n;
-    const unsigned int block_per_bucket;
+    const unsigned int blocksPerBucket;
 
     // Big difference here is that the digis are grouped in buckets and then bucket-wise sorted.
     experimental::CbmStsDigiBucket* bucket;
@@ -25,13 +25,12 @@ class jansergeysort_bench : public benchmark {
     xpu::hd_buffer<int> buffStartIndex;
     xpu::hd_buffer<int> buffEndIndex;
 
-    xpu::hd_buffer<unsigned int> sideStartIndex;
-    xpu::hd_buffer<unsigned int> sideEndIndex;
+    xpu::hd_buffer<unsigned int> channelSplitIndex;
 
 public:
-    jansergeysort_bench(const experimental::CbmStsDigiInput* in_digis, const size_t in_n, const bool in_write = false, const bool in_check = true, unsigned int in_block_per_bucket = 1) : n(in_n), digis(new experimental::CbmStsDigiInput[in_n]), block_per_bucket(in_block_per_bucket), benchmark(in_write, in_check) {
+    jansergeysort_bench(const experimental::CbmStsDigiInput* in_digis, const size_t in_n, const bool in_write = false, const bool in_check = true, unsigned int in_block_per_bucket = 2) : n(in_n), digis(new experimental::CbmStsDigiInput[in_n]), blocksPerBucket(in_block_per_bucket), benchmark(in_write, in_check) {
         std::copy(in_digis, in_digis + in_n, digis);
-        std::cout << "(" << name() << ")" << " Block per bucket=" << block_per_bucket << "\n";
+        std::cout << "(" << name() << ")" << " Block per bucket=" << blocksPerBucket << "\n";
     }
 
     ~jansergeysort_bench() {}
@@ -48,14 +47,13 @@ public:
         buffStartIndex = xpu::hd_buffer<int>(bucket->size());
         buffEndIndex = xpu::hd_buffer<int>(bucket->size());
 
-        // sideStartIndex[2 * i    ] = front start index
-        // sideStartIndex[2 * i + 1] = back start index
-        // same for end index..
-        sideStartIndex = xpu::hd_buffer<unsigned int>(bucket->size() * 2);
-        sideEndIndex = xpu::hd_buffer<unsigned int>(bucket->size() * 2);
+        channelSplitIndex = xpu::hd_buffer<unsigned int>(bucket->size());
 
         std::copy(bucket->startIndex, bucket->startIndex + bucket->size(), buffStartIndex.h());
         std::copy(bucket->endIndex, bucket->endIndex + bucket->size(), buffEndIndex.h());
+
+        std::copy(bucket->channelSplitIndex, bucket->channelSplitIndex + bucket->size(), channelSplitIndex.h());
+
         std::copy(bucket->digis, bucket->digis + n, buffDigis.h());
     }
 
@@ -64,8 +62,7 @@ public:
         delete bucket;
         buffDigis.reset();
         buffOutput.reset();
-        sideStartIndex.reset();
-        sideEndIndex.reset();
+        channelSplitIndex.reset();
     }
 
     size_t size_n() const { return n; }
@@ -76,26 +73,16 @@ public:
         xpu::copy(buffStartIndex, xpu::host_to_device);
         xpu::copy(buffEndIndex, xpu::host_to_device);
 
-        auto t0 = std::chrono::high_resolution_clock::now();  
+        xpu::copy(channelSplitIndex, xpu::host_to_device);
 
         // For now, one block per bucket.
-        xpu::run_kernel<Kernel>(xpu::grid::n_blocks(bucket->size() * block_per_bucket), n, buffDigis.d(), buffStartIndex.d(), buffEndIndex.d(), buffOutput.d(), sideStartIndex.d(), sideEndIndex.d());
-
-        const auto t1 = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double, std::milli> fp_ms = t1 - t0;
-        const auto durationMS = fp_ms.count();
-        timings_.push_back(durationMS);
+        xpu::run_kernel<Kernel>(xpu::grid::n_blocks(bucket->size() * blocksPerBucket), n, buffDigis.d(), buffStartIndex.d(), buffEndIndex.d(), buffOutput.d(), channelSplitIndex.d());
 
         // Copy result back to host.
         xpu::copy(buffOutput, xpu::device_to_host);
-
-        xpu::copy(sideStartIndex, xpu::device_to_host);
-        xpu::copy(sideEndIndex, xpu::device_to_host);
-
-        //for(int i=0; i < bucket->size(); i++) {
-        //    printf("Bucket idx=%d front=(%d, %d) back=(%d, %d) \n", i, sideStartIndex.h()[2*i], sideEndIndex.h()[2*i], sideStartIndex.h()[2*i + 1], sideEndIndex.h()[2*i + 1]);
-        //}
     }
+
+    std::vector<float> timings() override { return xpu::get_timing<Kernel>(); }
 
     size_t size() override { return n; }
 

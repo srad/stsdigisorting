@@ -2,87 +2,89 @@
 #include "JanSergeySort.h"
 #include "../datastructures.h"
 #include "../common.h"
-#include "device_fun.h"
+#include "../device.h"
 
 XPU_IMAGE(JanSergeySortKernel);
 
+//constexpr int block_scan_block_dim_x = 64;
+constexpr unsigned int channelRange = experimental::channelCount / 2;
+constexpr unsigned int itemsPerBlock = channelRange / experimental::JanSergeySortTPB;
+
+using count_t = unsigned int;
+using block_scan_t = xpu::block_scan<unsigned int, channelRange>;
+
 struct JanSergeySortSmem {
-    unsigned int countAndPrefixes[experimental::channelCount];
-    //unsigned int temp[experimental::channelCount];
-    //unsigned int output[experimental::channelCount];
+    count_t channelOffset[channelRange];
+    block_scan_t::storage_t temp;
 };
 
-constexpr int TPB = 128;
-constexpr int IPT = experimental::channelCount / TPB;
+XPU_KERNEL(JanSergeySort, JanSergeySortSmem, const size_t n, const experimental::CbmStsDigi* digis, const int* startIndex, const int* endIndex, experimental::CbmStsDigi* output, const unsigned int* channelSplitIndex) {
 
-XPU_KERNEL(JanSergeySort, JanSergeySortSmem, const size_t n, const experimental::CbmStsDigi* digis, const int* startIndex, const int* endIndex, experimental::CbmStsDigi* output, unsigned int* sideStartIndex, unsigned int* sideEndIndex) {
-    const int bucketIdx = xpu::block_idx::x();
-    const int bucketStartIdx = startIndex[bucketIdx];
-    const int bucketEndIdx = endIndex[bucketIdx];
+    // +--------------------------------------------------------------------+
+    // | Bucket 0             | Bucket 1             | Bucket 2             |
+    // +---------+------------+---------+------------+---------+------------+
+    // | Block 0 | Block 1    | Block 2 | Block 3    | Block 4 | Block 5    |
+    // +---------+------------+---------+------------+---------+------------+
+    // | 0..1023 | 1024..2047 | 0..1023 | 1024..2047 | 0..1023 | 1024..2047 |
+    // +---------+------------+---------+------------+---------+------------+
+    // | Front   | Back       |  Front  | Back       | Front   | Back       |
+    // +---------+------------+---------+------------+---------+------------+
+
+    // Two blocks handle one bucket.
+    // 0, 0, 1, 1, 2, 2, ...
+    const int bucketIdx = xpu::block_idx::x() / 2;
+
+    // 0, 1, 0, 1, ...
+    const unsigned int blockSide = (xpu::block_idx::x() % 2) * 1;
+
+    const bool isFront = blockSide == 0;
+    const bool isBack = blockSide == 1;
+
+    const int bucketStartIdx = (isFront * startIndex[bucketIdx]) + (isBack * channelSplitIndex[bucketIdx]);
+    const int bucketEndIdx = (isFront * (channelSplitIndex[bucketIdx] - 1)) + (isBack * endIndex[bucketIdx]);
     const int threadStart = bucketStartIdx + xpu::thread_idx::x();
 
     // -----------------------------------------------------------------------------------------------------------
     // 1. Init all channel counters to zero: O(channelCount)
-    // This step is not related to the input size.
+    // This step is not related to the input size, so aktually O(1).
     // -----------------------------------------------------------------------------------------------------------
-    for (int i = xpu::thread_idx::x(); i < experimental::channelCount; i += xpu::block_dim::x()) {
-        smem.countAndPrefixes[i] = 0;
+    for (int i = xpu::thread_idx::x(); i < channelRange; i += xpu::block_dim::x()) {
+        smem.channelOffset[i] = 0;
     }
     xpu::barrier();
 
     // -----------------------------------------------------------------------------------------------------------
-    // 2. Count channels: O(n + channelCount) -> O(n)
+    // 2. Count channels: O(n)
     // -----------------------------------------------------------------------------------------------------------
     for (int i = threadStart; i <= bucketEndIdx && i < n; i += xpu::block_dim::x()) {
-        xpu::atomic_add_block(&smem.countAndPrefixes[digis[i].channel], 1);
+        xpu::atomic_add_block(&smem.channelOffset[digis[i].channel % 1024], 1);
     }
     xpu::barrier();
 
     // -----------------------------------------------------------------------------------------------------------
-    // |3. Prefix sum: value[i] = sum(0, i-1) -> O(channelCount)
+    // 3. Exclusive sum: O(channelCount)
     // -----------------------------------------------------------------------------------------------------------
-    //prescan(smem.countAndPrefixes, smem.temp);
+    block_scan_t scan{smem.temp};
 
-    // Alternative:
-    /*
-    // This computation is so small and not dependent on the input, that it might not even be worth optimising.
-    // It is of length 2048 for each block and traverses the array linearly without addition space.
-    if (xpu::thread_idx::x() == 0) {
-        unsigned int sum = 0;
-        for (int i = 0; i < experimental::channelCount; i++) {
-            const auto tmp = smem.countAndPrefixes[i];
-            smem.countAndPrefixes[i] = sum;
-            sum += tmp;
-        }
+    const unsigned int channelStartIndex = xpu::thread_idx::x() * itemsPerBlock;
+
+    count_t items[itemsPerBlock];
+    for(int i=0; i < itemsPerBlock; i++) {
+        items[i] = smem.channelOffset[channelStartIndex + i];
     }
-    */
-    //xpu::barrier();
+    
+    // Collectively compute the block-wide inclusive prefix sum
+    scan.exclusive_sum(items, items);
+    xpu::barrier();
 
-    // -----------------------------------------------------------------------------------------------------------
-    // 4. Final sorting, place the elements in the correct position within the global output array: O(n)
-    //
-    // This must be done linearly otherwise there will be race conditions if a thread on the right wants to insert
-    // a digis into the same channel as a thread on the left. Might be handled by some algoritm, unclear yet.
-    // -----------------------------------------------------------------------------------------------------------
-    if (xpu::thread_idx::x() == 0) {
-        // TODO: replace by cub::DeviceScan::ExclusiveSum (https://nvlabs.github.io/cub/structcub_1_1_device_scan.html#a02b2d2e98f89f80813460f6a6ea1692b)
-        unsigned int sum = 0;
-        for (int i = 0; i < experimental::channelCount; i++) {
-            const auto tmp = smem.countAndPrefixes[i];
-            smem.countAndPrefixes[i] = sum;
-            sum += tmp;
-        }
-        
-        // Front
-        sideStartIndex[bucketIdx * 2] = bucketStartIdx;
-        sideEndIndex[  bucketIdx * 2] =  bucketStartIdx + smem.countAndPrefixes[1024] - 1;
+    for(int i=0; i < itemsPerBlock; i++) {
+        smem.channelOffset[channelStartIndex + i] = items[i];
+    }    
+    xpu::barrier();
 
-        // Back
-        sideStartIndex[bucketIdx * 2 + 1] = sideEndIndex[  bucketIdx * 2] + 1;
-        sideEndIndex[  bucketIdx * 2 + 1] = bucketEndIdx;
-
-        for (int i = bucketStartIdx; i <= bucketEndIdx && i < n; i++) {
-            output[bucketStartIdx + (smem.countAndPrefixes[digis[i].channel]++)] = digis[i];
+    if (xpu::thread_idx::x() == 0) {   
+        for (int i = bucketStartIdx; i <= bucketEndIdx; i++) {
+            output[bucketStartIdx + (smem.channelOffset[digis[i].channel % 1024]++)] = digis[i];
         }
     }
 }

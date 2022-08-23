@@ -74,15 +74,8 @@ public:
         xpu::copy(buffStartIndex, xpu::host_to_device);
         xpu::copy(buffEndIndex, xpu::host_to_device);
 
-        auto t0 = std::chrono::high_resolution_clock::now();  
-
         // const experimental::CbmStsDigi* data, const int* startIndex, const int* endIdex, experimental::CbmStsDigi* buf, experimental::CbmStsDigi** out, const size_t numElems
         xpu::run_kernel<Kernel>(xpu::grid::n_blocks(bucket->size()), buffDigis.d(), buffStartIndex.d(), buffEndIndex.d(), devBuffer, devOutput, n, sideStartIndex.d(), sideEndIndex.d());
-
-        const auto t1 = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double, std::milli> fp_ms = t1 - t0;
-        const auto durationMS = fp_ms.count();
-        timings_.push_back(durationMS);
 
         // Get the buffer that contains the sorted data.
         experimental::CbmStsDigi* hostOutput = nullptr;
@@ -96,6 +89,8 @@ public:
         xpu::copy(sideEndIndex, xpu::device_to_host);
 
     }
+
+    std::vector<float> timings() override { return xpu::get_timing<Kernel>(); }
 
     experimental::CbmStsDigi* output() override { return sorted; }
 

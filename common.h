@@ -14,9 +14,7 @@
 
 namespace experimental {
 
-    constexpr int channelCount = 2048;
-
-    void create_dir(std::string dir) {
+    void create_dir(const std::string dir) {
         const int dir_err = std::system(("mkdir -p " + dir).c_str());
         if (dir_err == -1) {
             std::cerr << "Error creating directory!n";
