@@ -1,0 +1,17 @@
+#pragma once
+
+namespace experimental {
+
+    constexpr int channelCount = 2048;
+
+#if XPU_IS_CUDA
+    constexpr int JanSergeySortTPB = $CUDA_JanSergeySortTPB;
+    constexpr int BlockSortBlockDimX = $CUDA_BlockSortBlockDimX;
+    constexpr int BlockSortItemsPerThread = $CUDA_BlockSortItemsPerThread;
+#else
+    constexpr int JanSergeySortTPB = $HIP_JanSergeySortTPB;
+    constexpr int BlockSortBlockDimX = $HIP_BlockSortBlockDimX;
+    constexpr int BlockSortItemsPerThread = $HIP_BlockSortItemsPerThread;
+#endif
+
+}

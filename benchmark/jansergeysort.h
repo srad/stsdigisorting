@@ -16,11 +16,11 @@ class jansergeysort_bench : public benchmark {
     const unsigned int blocksPerBucket;
 
     // Big difference here is that the digis are grouped in buckets and then bucket-wise sorted.
-    experimental::CbmStsDigiBucket* bucket;
+    bucket_t* bucket;
 
     experimental::CbmStsDigiInput* digis;
-    xpu::hd_buffer <experimental::CbmStsDigi> buffDigis;
-    xpu::hd_buffer <experimental::CbmStsDigi> buffOutput;
+    xpu::hd_buffer <digi_t> buffDigis;
+    xpu::hd_buffer <digi_t> buffOutput;
 
     xpu::hd_buffer<int> buffStartIndex;
     xpu::hd_buffer<int> buffEndIndex;
@@ -35,13 +35,15 @@ public:
 
     ~jansergeysort_bench() {}
 
-    std::string name() { return xpu::get_name<Kernel>(); }
+    std::string name() {
+        return  std::string(xpu::get_name<Kernel>()) + "(" + std::to_string(experimental::JanSergeySortTPB) + ")";
+    }
 
     void setup() {
-        buffDigis = xpu::hd_buffer<experimental::CbmStsDigi>(n);        
-        buffOutput = xpu::hd_buffer<experimental::CbmStsDigi>(n);
+        buffDigis = xpu::hd_buffer<digi_t>(n);        
+        buffOutput = xpu::hd_buffer<digi_t>(n);
 
-        bucket = new experimental::CbmStsDigiBucket(digis, n);
+        bucket = new bucket_t(digis, n);
         std::cout << "Buckets created." << "\n";
 
         buffStartIndex = xpu::hd_buffer<int>(bucket->size());
@@ -60,6 +62,8 @@ public:
     void teardown() {
         delete[] digis;
         delete bucket;
+        buffStartIndex.reset();
+        buffEndIndex.reset();
         buffDigis.reset();
         buffOutput.reset();
         channelSplitIndex.reset();
@@ -86,7 +90,7 @@ public:
 
     size_t size() override { return n; }
 
-    experimental::CbmStsDigi* output() override { return buffOutput.h(); }
+    digi_t* output() override { return buffOutput.h(); }
 
     void write() override {
         benchmark::write();
@@ -110,6 +114,6 @@ public:
         */
     }
 
-    size_t bytes() { return n * sizeof(experimental::CbmStsDigi); }
+    size_t bytes() { return n * sizeof(digi_t); }
 
 };

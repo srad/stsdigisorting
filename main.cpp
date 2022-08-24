@@ -9,6 +9,7 @@
 
 #include "sorting/BlockSort.h"
 #include "sorting/JanSergeySort.h"
+#include "sorting/JanSergeySortSingleBlock.h"
 
 int main(int argc, char** argv) {
     try {
@@ -19,6 +20,7 @@ int main(int argc, char** argv) {
         unsigned int max_n = 0;
         bool writeOutput = false;
         bool checkResult = false;
+        std::string benchmark_subfolder = "";
 
         for (int i = 1; i < argc; i++) {
             if (strcmp(argv[i], "-i") == 0) {
@@ -40,6 +42,9 @@ int main(int argc, char** argv) {
                 // Caps the data size by some integer n.
                 max_n = std::stoi(argv[i + 1]);
                 std::cout << "n: " << max_n << "\n";
+            } else if (strcmp(argv[i], "-b") == 0) {
+                benchmark_subfolder = argv[i + 1];
+                std::cout << "Writing benchmarks to file: " << benchmark_subfolder << "\n";
             }
         }
 
@@ -60,7 +65,7 @@ int main(int argc, char** argv) {
 
         xpu::initialize();
 
-        benchmark_runner runner;
+        benchmark_runner runner(benchmark_subfolder);
 
         // Run block sort on all devices.
         runner.add(new blocksort_bench<BlockSort>(aDigis, n, writeOutput, checkResult));
@@ -68,7 +73,7 @@ int main(int argc, char** argv) {
         if (xpu::active_driver() != xpu::cpu) {
             std::cout << "Using GPU.\n\n";
             runner.add(new jansergeysort_bench<JanSergeySort>(aDigis, n, writeOutput, checkResult));
-            //runner.add(new jansergeysort_sided_bench<JanSergeySortSided>(aDigis, n, writeOutput, checkResult, 2));
+            //runner.add(new jansergeysort_bench<JanSergeySortSingleBlock>(aDigis, n, writeOutput, checkResult));
         } else {
             // Only on
             runner.add(new stdsort_bench(aDigis, n, writeOutput, checkResult));

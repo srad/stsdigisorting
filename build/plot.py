@@ -10,8 +10,11 @@ import numpy as np
 import os
 import sys
 
-with open("benchmark_results.csv") as fp:
-    reader = csv.reader(fp, delimiter=",")
+filename_results = os.getenv('FILENAME_RESULTS', 'benchmark_results.csv')
+filename_tp = os.getenv('FILENAME_TP', 'benchmark_tp.csv')
+
+with open(filename_results) as fp:
+    reader = csv.reader(fp, delimiter=",", quotechar='"')
     #next(reader, None)  # skip the headers
     headers = reader.next()
     data = [row for row in reader]
@@ -37,6 +40,7 @@ for i in range(1, n):
 plt.title("Median runtime on device '" + os.getenv('XPU_DEVICE') + "'")
 plt.xlabel("Digis (10^5)")
 plt.ylabel("ms")
+plt.grid(linestyle='dotted')
 
 plt.legend()
 
@@ -62,6 +66,7 @@ plt.axhline(y=0.0, color="green", linestyle="--")
 plt.title("Speedup JanSergeySort vs. BlockSort (median: " + ('%.2f' % np.median(speedup)) + "ms)")
 plt.xlabel("digis (10^5)")
 plt.ylabel("speedup (ms)")
+plt.grid(linestyle='dotted')
 plt.savefig('./plots/' + sys.argv[2], dpi=300)
 
 # ------------------------------------------------------------------------------------------
@@ -77,6 +82,7 @@ plt.plot(n_in_millions, speedup_percent, linestyle="-")
 plt.fill_between(n_in_millions, speedup_percent, 0.0, where=(speedup_percent > z), alpha=0.20, facecolor="green", interpolate=True)
 plt.fill_between(n_in_millions, speedup_percent, 0.0, where=(speedup_percent < z), alpha=0.20, facecolor="red", interpolate=True)
 plt.axhline(y=0.0, color="green", linestyle="--")
+plt.grid(linestyle='dotted')
 
 plt.title("Speedup JanSergeySort vs. BlockSort (median: " + ('%.2f' % np.median(speedup_percent)) + "%)")
 plt.xlabel("digis (10^5)")
@@ -89,7 +95,7 @@ plt.savefig('./plots/' + sys.argv[3], dpi=300)
 
 plt.figure().clear()
 
-with open("benchmark_tp.csv") as fp:
+with open(filename_tp) as fp:
     reader = csv.reader(fp, delimiter=",")
     #next(reader, None)  # skip the headers
     headers_tp = reader.next()
@@ -109,6 +115,7 @@ for i in range(1, n):
 plt.title("Median throughput on device '" + os.getenv('XPU_DEVICE') + "'")
 plt.xlabel("Digis (10^5)")
 plt.ylabel("GB/s")
+plt.grid(linestyle='dotted')
 plt.legend()
 
 plt.savefig('./plots/' + sys.argv[4], dpi=300)

@@ -9,38 +9,26 @@
 XPU_IMAGE(BlockSortKernel);
 
 // <Bock size=thread per block (hier zumindest), items per thread>
-using SortT = xpu::block_sort<unsigned long int, experimental::CbmStsDigi, experimental::BlockSortBlockDimX, experimental::BlockSortItemsPerThread>;
+using SortT = xpu::block_sort<unsigned long int, digi_t, experimental::BlockSortBlockDimX, experimental::BlockSortItemsPerThread>;
 
 struct GpuSortSmem {
     typename SortT::storage_t sortBuf;
 };
 
-XPU_KERNEL(BlockSort, GpuSortSmem, experimental::CbmStsDigi* data, int* startIndex, int* endIndex, experimental::CbmStsDigi* buf, experimental::CbmStsDigi** out, const size_t numElems, unsigned int* sideStartIndex, unsigned int* sideEndIndex) {
-    const size_t itemsPerThread = endIndex[xpu::block_idx::x()] - startIndex[xpu::block_idx::x()] + 1;
-    const size_t offset = startIndex[xpu::block_idx::x()];
-    const int bucketIdx = xpu::block_idx::x();
-    const int bucketStartIdx = startIndex[bucketIdx];
-    const int bucketEndIdx = endIndex[bucketIdx];
+XPU_KERNEL(BlockSort, GpuSortSmem, digi_t* data, const int* startIndex, const int* endIndex, digi_t* buf, digi_t** output, const size_t n) {
+    const auto bucketIdx = xpu::block_idx::x();
+    const auto bucketSize = endIndex[bucketIdx] - startIndex[bucketIdx] + 1;
+    const auto offsetIdx = startIndex[bucketIdx];
 
     // Do not overshoot array boundary when you have more blocks than threads.
-    experimental::CbmStsDigi* res = SortT(smem.sortBuf).sort(
-        &data[offset], itemsPerThread, &buf[offset],
-        [](const experimental::CbmStsDigi& a) { return ((unsigned long int) a.channel) << 32 | (unsigned long int) (a.time); }
+    digi_t* res = SortT(smem.sortBuf).sort(
+        &data[offsetIdx], bucketSize, &buf[offsetIdx],
+        [](const digi_t& a) { return ((unsigned long int) a.channel) << 32 | (unsigned long int) (a.time); }
     );
 
     // Once the sorting is completed, the first thread in each Block write
     if (xpu::thread_idx::x() == 0) {
-        //printf("offset=%d, itemsPerThread=%d, xpu::block_idx::x()=%d, side_index=%d\n", offset, itemsPerThread, xpu::block_idx::x(), findSideSeperatorIndex(res, itemsPerThread, sideSeperator));
-        const int index = findSideSeperatorIndex(res, itemsPerThread, sideSeperator);
-        
-        sideStartIndex[bucketIdx * 2] = bucketStartIdx;
-        sideEndIndex[bucketIdx * 2] =  bucketStartIdx + index;
-
-        // Back
-        sideStartIndex[bucketIdx * 2 + 1] = sideEndIndex[bucketIdx * 2] + 1;
-        sideEndIndex[bucketIdx * 2 + 1] = bucketEndIdx;
-
-        //printf("offset=%d, itemsPerThread=%d, xpu::block_idx::x()=%d, side_index=%d\n", offset, itemsPerThread, xpu::block_idx::x(), findSideSeperatorIndex(res, itemsPerThread, sideSeperator));
-        out[xpu::block_idx::x()] = res;
+        //printf("offsetIdx=%d, bucketSize=%d, bucketIdx=%d, side_index=%d\n", offsetIdx, bucketSize, bucketIdx, findSideSeperatorIndex(res, bucketSize, sideSeperator));
+        output[bucketIdx] = res;
     }
 }

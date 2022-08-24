@@ -15,10 +15,10 @@ class stdsort_bench : public benchmark {
 
     const size_t n;
     experimental::CbmStsDigiInput* digis;
-    experimental::CbmStsDigi* sorted;
+    digi_t* sorted;
 
 public:
-    stdsort_bench(const experimental::CbmStsDigiInput* in_digis, const size_t in_n, const bool write = false, const bool check = true) : n(in_n), digis(new experimental::CbmStsDigiInput[in_n]), sorted(new experimental::CbmStsDigi[in_n]), benchmark(write, check) {
+    stdsort_bench(const experimental::CbmStsDigiInput* in_digis, const size_t in_n, const bool write = false, const bool check = true) : n(in_n), digis(new experimental::CbmStsDigiInput[in_n]), sorted(new digi_t[in_n]), benchmark(write, check) {
         std::copy(in_digis, in_digis + n, digis);
     }
 
@@ -37,12 +37,12 @@ public:
     void run() {
         // Copy for each run a fresh output original digi array.
         for (int i=0; i < n; i++) {
-            sorted[i] = experimental::CbmStsDigi(digis[i].channel, digis[i].time);
+            sorted[i] = digi_t(digis[i].channel, digis[i].time);
         }
 
         auto started = std::chrono::high_resolution_clock::now();
 
-        std::sort(sorted, sorted + n, [](const experimental::CbmStsDigi& a, const experimental::CbmStsDigi& b) {
+        std::sort(sorted, sorted + n, [](const digi_t& a, const digi_t& b) {
             return (((unsigned long int) a.channel) << 32 | (unsigned long int) (a.time)) < (((unsigned long int) b.channel) << 32 | (unsigned long int) (b.time));
         });
 
@@ -52,8 +52,8 @@ public:
 
     size_t size() override { return n; }
 
-    experimental::CbmStsDigi* output() override { return sorted; }
+    digi_t* output() override { return sorted; }
 
-    size_t bytes() { return n * sizeof(experimental::CbmStsDigi); }
+    size_t bytes() { return n * sizeof(digi_t); }
 
 };

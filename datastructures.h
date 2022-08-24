@@ -4,6 +4,8 @@
 #include <unordered_map>
 #include <iomanip>
 
+// Notice type alias last line.
+
 namespace experimental {
 
     using index_t = unsigned int;
@@ -196,3 +198,6 @@ namespace experimental {
         }
     };
 }
+
+using digi_t = experimental::CbmStsDigi;
+using bucket_t = experimental::CbmStsDigiBucket;

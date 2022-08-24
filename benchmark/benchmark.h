@@ -25,7 +25,7 @@ public:
     virtual void teardown() = 0;
     virtual void run() = 0;
     virtual size_t size() = 0;
-    virtual experimental::CbmStsDigi* output() = 0;
+    virtual digi_t* output() = 0;
 
     virtual size_t bytes() { return 0; }
 
@@ -33,7 +33,7 @@ public:
 
     virtual void write() {
         experimental::create_dir("output");
-        const experimental::CbmStsDigi* sorted = output();
+        const digi_t* sorted = output();
 
         // +------------------------------------------------------------------------------+
         // |                               Sorted output                                  |
@@ -50,7 +50,7 @@ public:
     }
 
     virtual void check() {
-        const experimental::CbmStsDigi* sorted = output();
+        const digi_t* sorted = output();
 
         // Check if data is sorted.
         bool ok = true;
@@ -90,28 +90,37 @@ public:
 class benchmark_runner {
 
 public:
+    benchmark_runner(const std::string in_subfolder = "") : subfolder(in_subfolder) {}
+
     void add(benchmark* b) { benchmarks.emplace_back(b); }
 
     void run(int n) {
-        const std::string filename = "benchmark_results.csv";
+        const std::string filename = (subfolder != "") ? subfolder + "/benchmark_results.csv" : "benchmark_results.csv";
+        const std::string tp_filename = (subfolder != "") ? subfolder + "/benchmark_tp.csv" : "benchmark_tp.csv";
+
         const bool exists = experimental::file_exists(filename);
 
         std::ofstream output;
         output.open(filename, std::ios::out | std::ios_base::app);
 
         std::ofstream tp;
-        tp.open("benchmark_tp.csv", std::ios::out | std::ios_base::app);
+        tp.open(tp_filename, std::ios::out | std::ios_base::app);
 
-        if (!exists) { output << "n"; tp << "n"; }
+        // Header
+
+        // n col.
+        if (!exists) { output << "\"n\""; tp << "\"n\""; }
         std::cout << "Writing benchmark results ..\n";
 
+        // Benchmark names as cols.
         for (auto& b: benchmarks) {
             if (!exists) {
-                output << "," << b.get()->name();
-                tp << "," << b.get()->name();
+                output << ",\"" << b.get()->name() << "\"";
+                tp << ",\"" << b.get()->name() << "\"";
             }
             run_benchmark(b.get(), n);
         }
+        // Line end.
         if (!exists) { output << "\n"; tp << "\n"; }
 
         print_entry("Benchmark");
@@ -136,6 +145,7 @@ public:
 
 private:
     std::vector <std::unique_ptr<benchmark>> benchmarks;
+    const std::string subfolder;
 
     void run_benchmark(benchmark* b, const int r) {
         std::cout << "------------------------------------------------------------\nRunning benchmark '" << b->name() << "'\n------------------------------------------------------------" << std::endl;
