@@ -3,11 +3,19 @@
 BlockSortBlockDimX=64
 BlockSortItemsPerThread=8
 
+rm -fr plots/*
+mkdir -p plots
+
+#    BlockSortBlockDimX=$thread_count
+#    BlockSortItemsPerThread=$((2048 / JanSergeySortTPB))
+
 for device in cuda0 hip0; do
+  # TODO: replace these static numbers by warp size increments, for device (32 nvidia, 64 amd)
+  # but that will take the benchmark forever.
   for thread_count in 128 256 512 1024; do
     JanSergeySortTPB=$thread_count
-    BlockSortBlockDimX=$thread_count
-    BlockSortItemsPerThread=$((2048 / JanSergeySortTPB))
+    BlockSortBlockDimX=64
+    BlockSortItemsPerThread=8
 
     echo "
     #pragma once

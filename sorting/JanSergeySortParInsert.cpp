@@ -1,25 +1,21 @@
 #include <xpu/device.h>
-#include "JanSergeySort.h"
+#include "JanSergeySortParInsert.h"
 #include "../datastructures.h"
 #include "../common.h"
 #include "../device.h"
-#include "../types.h"
 
-XPU_IMAGE(experimental::JanSergeySortKernel);
+XPU_IMAGE(experimental::JanSergeySortParInsertKernel);
 
 namespace experimental {
 
-    // TODO: checken
-    using block_scan_t = xpu::block_scan<count_t, JanSergeySortTPB>;
+    constexpr unsigned int channelRange = channelCount;
+    constexpr unsigned int itemsPerBlock = channelRange / JanSergeySortTPB;
 
-    // union
-    struct JanSergeySortSmem {
+    struct JanSergeySortParInsertSmem {
         count_t channelOffset[channelRange];
-        block_scan_t::storage_t temp;
     };
 
-    XPU_KERNEL(JanSergeySort, JanSergeySortSmem, const size_t n, const digi_t* digis, const index_t* startIndex, const index_t* endIndex, digi_t* output, const index_t* channelSplitIndex) {
-
+    XPU_KERNEL(JanSergeySortParInsert, JanSergeySortParInsertSmem, const size_t n, const digi_t* digis, const index_t* startIndex, const index_t* endIndex, digi_t* output, const index_t* channelSplitIndex) {
         // +--------------------------------------------------------------------+
         // | Bucket 0             | Bucket 1             | Bucket 2             |
         // +---------+------------+---------+------------+---------+------------+
@@ -60,33 +56,17 @@ namespace experimental {
         }
         xpu::barrier();
 
-        // -----------------------------------------------------------------------------------------------------------
-        // 3. Exclusive sum: O(channelCount)
-        // -----------------------------------------------------------------------------------------------------------
-        // vergleiche mit simple loop (sum bla bla)
-        block_scan_t scan{smem.temp};
-
-        const uint_t channelStartIndex = xpu::thread_idx::x() * itemsPerBlock;
-
-        // replace copy for and back by: reinterpret_cast<count_t(&)[itemsPerBlock]>(smem.channelOffset + channelStartIndex);
-        auto channelOffsetSection = reinterpret_cast<count_t(*)[itemsPerBlock]>(smem.channelOffset + channelStartIndex);
-        //uint_t items[itemsPerBlock];
-        //for(int i=0; i < itemsPerBlock; i++) {
-        //    items[i] = smem.channelOffset[channelStartIndex + i];
-        //}
-        
-        // Collectively compute the block-wide inclusive prefix sum
-        // channelOffset + offset static_cast, mal ausprobieren
-        scan.exclusive_sum(*channelOffsetSection, *channelOffsetSection);
-        xpu::barrier();
-
-        //for(int i=0; i < itemsPerBlock; i++) {
-        //    smem.channelOffset[channelStartIndex + i] = items[i];
-        //}
-        //xpu::barrier();
-
-        // para
         if (xpu::thread_idx::x() == 0) {   
+            // -----------------------------------------------------------------------------------------------------------
+            // 3. Exclusive sum: O(channelCount)
+            // -----------------------------------------------------------------------------------------------------------
+            unsigned int sum = 0;
+            for (int i = 0; i < channelCount; i++) {
+                const auto tmp = smem.channelOffset[i];
+                smem.channelOffset[i] = sum;
+                sum += tmp;
+            }
+
             for (int i = bucketStartIdx; i <= bucketEndIdx; i++) {
                 output[bucketStartIdx + (smem.channelOffset[digis[i].channel % 1024]++)] = digis[i];
             }

@@ -3,6 +3,11 @@
 #include <xpu/device.h>
 #include <cstddef> // for size_t
 #include "../datastructures.h"
+#include "../types.h"
 
-struct BlockSortKernel {};
-XPU_EXPORT_KERNEL(BlockSortKernel, BlockSort, digi_t*, const int*, const int*, digi_t*, digi_t**, const size_t);
+namespace experimental {
+
+    struct BlockSortKernel {};
+    XPU_EXPORT_KERNEL(BlockSortKernel, BlockSort, digi_t*, const index_t*, const index_t*, digi_t*, digi_t**, const size_t);
+
+}

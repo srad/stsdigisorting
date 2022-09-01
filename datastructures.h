@@ -3,13 +3,12 @@
 #include <string>
 #include <unordered_map>
 #include <iomanip>
+#include "types.h"
 
 // Notice type alias last line.
 
 namespace experimental {
 
-    using index_t = unsigned int;
-    using count_t = unsigned int;
     using address_t = unsigned int;
     using address_counter_t = std::unordered_map<address_t, count_t>;
 

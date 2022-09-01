@@ -31,6 +31,13 @@ namespace experimental {
         return infile.peek() == std::ifstream::traits_type::eof();
     }
 
+    std::string get_env(std::string const& key) {
+        char const* val = std::getenv(key.c_str()); 
+        return val == NULL ? std::string() : std::string(val);
+    }
+
+    std::string get_device() { return experimental::get_env("XPU_DEVICE"); }
+
     std::string stamp_name(const std::string filename, const std::string ext) {
         auto now = std::chrono::system_clock::now();
         auto in_time_t = std::chrono::system_clock::to_time_t(now);
