@@ -35,17 +35,17 @@ namespace experimental {
 
         virtual void write() {
             create_dir("output");
-            const digi_t* sorted = output();
+            digi_t* sorted = output();
 
             // +------------------------------------------------------------------------------+
             // |                               Sorted output                                  |
             // +------------------------------------------------------------------------------+
             std::ofstream file;
             file.open("output/" + name() + ".csv", std::ios::out | std::ios::trunc);
-            file << "index,address,channel,time\n";
+            file << "index," + digi_t::csv_headers()  + "\n";
 
             for (int i = 0; i < size(); i++) {
-                file << i << "," << sorted[i].channel << "," << sorted[i].time << "\n";
+                file << i << "," << sorted[i].to_csv() << "\n";
             }
 
             file.close();

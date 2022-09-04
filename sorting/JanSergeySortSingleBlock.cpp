@@ -54,10 +54,21 @@ namespace experimental {
         // 3. Exclusive sum: O(channelCount)
         // -----------------------------------------------------------------------------------------------------------
         block_scan_t scan{smem.temp};
-
         const uint_t channelStartIndex = xpu::thread_idx::x() * itemsPerBlock;
-        auto channelOffsetSection = reinterpret_cast<count_t(*)[itemsPerBlock]>(smem.channelOffset + channelStartIndex);
-        scan.exclusive_sum(*channelOffsetSection, *channelOffsetSection);
+
+        uint_t items[itemsPerBlock];
+        for(int i=0; i < itemsPerBlock; i++) {
+            items[i] = smem.channelOffset[channelStartIndex + i];
+        }
+        
+        // Collectively compute the block-wide inclusive prefix sum
+        // channelOffset + offset static_cast, mal ausprobieren
+        scan.exclusive_sum(items, items);
+        xpu::barrier();
+
+        for(int i=0; i < itemsPerBlock; i++) {
+            smem.channelOffset[channelStartIndex + i] = items[i];
+        }
         xpu::barrier();
 
         if (xpu::thread_idx::x() == 0) {

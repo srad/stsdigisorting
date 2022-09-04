@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <iomanip>
 #include "types.h"
+#include "constants.h"
 
 // Notice type alias last line.
 
@@ -18,17 +19,37 @@ namespace experimental {
     // front_end_index = number of digis in bucket with channel < 1024.
     using channel_side_counter_t = std::unordered_map<address_t, std::array<count_t, 2>>;
 
+
+    // The debug version carries the address, so the sorting result (in buckets) can be better debugged.
+#ifdef DEBUG_SORT
+    struct CbmStsDigi {
+        int address;
+        int channel;
+        int time;
+
+        CbmStsDigi(int in_address, int in_channel, int in_time) : address(in_address), channel(in_channel), time(in_time) {}
+        CbmStsDigi() = default;
+        ~CbmStsDigi() = default;
+
+        std::string to_csv() { return std::to_string(address) + "," + std::to_string(channel) + "," + std::to_string(time); }
+        static std::string csv_headers() { return "address,channel,time"; }
+    };
+#else
     struct CbmStsDigi {
         int channel;
         int time;
 
-        CbmStsDigi(int in_channel, int in_time) : channel(in_channel), time(in_time) {}
+        CbmStsDigi(int in_address, int in_channel, int in_time) : channel(in_channel), time(in_time) {}
         CbmStsDigi() = default;
         ~CbmStsDigi() = default;
-    };
 
+        std::string to_csv() { return std::to_string(channel) + "," + std::to_string(time); }
+        static std::string csv_headers() { return "channel,time"; }
+    };
+#endif
+
+    // This is the data that is read from the CSV file. It contains more information than is relevant for the sorting benchmark.
     struct CbmStsDigiInput {
-        // address,system,unit,ladder,half-ladder,module,sensor,side,channel,time
         int address;
         int system;
         int unit;
@@ -192,7 +213,7 @@ namespace experimental {
             // Copy elements to the right location
             // -----------------------------------------------------------------------------------
             for (int i = 0; i < n_; i++) {
-                digis[addressStartIndex[input[i].address] + (channelSideCounter[input[i].address][(input[i].channel >= 1024)]++)] = CbmStsDigi(input[i].channel, input[i].time);
+                digis[addressStartIndex[input[i].address] + (channelSideCounter[input[i].address][(input[i].channel >= 1024)]++)] = CbmStsDigi(input[i].address, input[i].channel, input[i].time);
             }
         }
     };
