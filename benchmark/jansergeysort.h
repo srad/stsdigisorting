@@ -39,7 +39,9 @@ namespace experimental {
         ~jansergeysort_bench() {}
 
         std::string name() {
-            return  std::string(xpu::get_name<Kernel>()) + "(" + std::to_string(JanSergeySortTPB) + "," + get_device() + ")";
+            const auto kernel = std::string(xpu::get_name<Kernel>());
+            const auto str = kernel.substr(kernel.find("::") + 2, kernel.length());
+            return  str + "(" + std::to_string(JanSergeySortTPB) + "," + get_device() + ")";
         }
 
         void setup() {

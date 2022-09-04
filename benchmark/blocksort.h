@@ -43,7 +43,7 @@ namespace experimental {
         ~blocksort_bench() {}
 
         std::string name() {
-            return  std::string(xpu::get_name<Kernel>()) + "(" + std::to_string(BlockSortBlockDimX) + "," + std::to_string(BlockSortItemsPerThread) + "," + get_device() + ")";
+            return "BlockSort(" + std::to_string(BlockSortBlockDimX) + "," + std::to_string(BlockSortItemsPerThread) + "," + get_device() + ")";
         }
 
         void setup() {
