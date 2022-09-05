@@ -10,7 +10,7 @@ XPU_IMAGE(experimental::JanSergeySortKernel);
 namespace experimental {
 
     // TODO: checken
-    using block_scan_t = xpu::block_scan<count_t, JanSergeySortTPB>;
+    using block_scan_t = xpu::block_scan<count_t, JanSergeySortBlockDimX>;
 
     // union
     struct JanSergeySortSmem {

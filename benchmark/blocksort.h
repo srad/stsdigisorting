@@ -42,11 +42,9 @@ namespace experimental {
 
         ~blocksort_bench() {}
 
-        std::string name() {
-            return "BlockSort(" + std::to_string(BlockSortBlockDimX) + "," + std::to_string(BlockSortItemsPerThread) + "," + get_device() + ")";
-        }
+        BenchmarkInfo info() override { return BenchmarkInfo{"xpu::block_sort", BlockSortBlockDimX, BlockSortItemsPerThread}; }
 
-        void setup() {
+        void setup() override {
             devOutput = xpu::device_malloc<digi_t*>(n);
             devBuffer = xpu::device_malloc<digi_t>(n);
 
@@ -63,9 +61,9 @@ namespace experimental {
             std::copy(bucket->digis, bucket->digis + n, buffDigis.h());
         }
 
-        size_t size() override { return n; }
+        size_t size() const { return n; }
 
-        void run() {
+        void run() override {
             xpu::copy(buffDigis, xpu::host_to_device);
             xpu::copy(buffStartIndex, xpu::host_to_device);
             xpu::copy(buffEndIndex, xpu::host_to_device);
@@ -84,7 +82,7 @@ namespace experimental {
 
         digi_t* output() override { return sorted; }
 
-        void teardown() {
+        void teardown() override {
             delete[] digis;
             delete bucket;
             delete [] sorted;
@@ -95,7 +93,7 @@ namespace experimental {
             xpu::free(devBuffer);
         }
 
-        size_t bytes() { return n * sizeof(digi_t); }
+        size_t bytes() const { return n * sizeof(digi_t); }
 
     };
     

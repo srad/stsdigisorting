@@ -6,6 +6,8 @@ set(CMAKE_CXX_STANDARD 17)
 
 find_package(Threads REQUIRED)
 
+add_subdirectory(lib/sqlite_orm)
+
 #add_subdirectory(tests)
 add_subdirectory(lib/xpu)
 
@@ -27,4 +29,13 @@ xpu_attach(JanSergeySortParInsert sorting/JanSergeySortParInsert.cpp)
 
 # add the executable
 add_executable(stsdigisort main.cpp)
-target_link_libraries(stsdigisort Threads::Threads xpu BlockSort JanSergeySort JanSergeySortSimpleSum JanSergeySortSingleBlock JanSergeySortParInsert)
+target_link_libraries(stsdigisort
+    Threads::Threads
+    xpu
+    BlockSort
+    JanSergeySort
+    JanSergeySortSimpleSum
+    JanSergeySortSingleBlock
+    JanSergeySortParInsert
+    sqlite_orm::sqlite_orm
+    )

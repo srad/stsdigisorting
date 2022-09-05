@@ -67,9 +67,7 @@ int main(int argc, char** argv) {
 
         xpu::initialize();
 
-        experimental::benchmark_runner runner(benchmark_subfolder);
-
-        runner.add(new experimental::stdsort_bench(aDigis, n, writeOutput, checkResult));
+        experimental::benchmark_runner runner(benchmark_subfolder, input);
 
         // Run block sort on all devices.
         runner.add(new experimental::blocksort_bench<experimental::BlockSort>(aDigis, n, writeOutput, checkResult));
@@ -77,13 +75,14 @@ int main(int argc, char** argv) {
         if (xpu::active_driver() != xpu::cpu) {
             std::cout << "Using GPU.\n\n";
             runner.add(new experimental::jansergeysort_bench<experimental::JanSergeySort>(aDigis, n, writeOutput, checkResult));
+            runner.add(new experimental::jansergeysort_bench<experimental::JanSergeySortSingleBlock>(aDigis, n, writeOutput, checkResult, 1));
             runner.add(new experimental::jansergeysort_bench<experimental::JanSergeySortSimpleSum>(aDigis, n, writeOutput, checkResult, 1));
             //runner.add(new experimental::jansergeysort_bench<experimental::JanSergeySortParInsert>(aDigis, n, writeOutput, checkResult));
             // const CbmStsDigiInput* in_digis, const size_t in_n, const bool in_write = false, const bool in_check = true, unsigned int in_block_per_bucket = 2
-            runner.add(new experimental::jansergeysort_bench<experimental::JanSergeySortSingleBlock>(aDigis, n, writeOutput, checkResult, 1));
         } else {
-            // Only on
             std::cout << "No GPU device used.\n\n";
+            runner.add(new experimental::stdsort_bench(aDigis, n, experimental::SortMode::seq, writeOutput, checkResult));
+            runner.add(new experimental::stdsort_bench(aDigis, n, experimental::SortMode::par, writeOutput, checkResult));
         }
 
         runner.run(10);

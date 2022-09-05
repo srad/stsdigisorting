@@ -33,15 +33,14 @@ namespace experimental {
     public:
         jansergeysort_bench(const CbmStsDigiInput* in_digis, const size_t in_n, const bool in_write = false, const bool in_check = true, unsigned int in_block_per_bucket = 2) : n(in_n), digis(new CbmStsDigiInput[in_n]), blocksPerBucket(in_block_per_bucket), benchmark(in_write, in_check) {
             std::copy(in_digis, in_digis + in_n, digis);
-            std::cout << "(" << name() << ")" << " Block per bucket=" << blocksPerBucket << "\n";
+            std::cout << "(" << info().name << ")" << " Block per bucket=" << blocksPerBucket << "\n";
         }
 
         ~jansergeysort_bench() {}
 
-        std::string name() {
+        BenchmarkInfo info() override {
             const auto kernel = std::string(xpu::get_name<Kernel>());
-            const auto str = kernel.substr(kernel.find("::") + 2, kernel.length());
-            return  str + "(" + std::to_string(JanSergeySortTPB) + "," + get_device() + ")";
+            return BenchmarkInfo{kernel, JanSergeySortBlockDimX, 0};
         }
 
         void setup() {
@@ -64,7 +63,7 @@ namespace experimental {
             std::copy(bucket->digis, bucket->digis + n, buffDigis.h());
         }
 
-        void teardown() {
+        void teardown() override {
             delete[] digis;
             delete bucket;
             buffStartIndex.reset();
@@ -76,7 +75,7 @@ namespace experimental {
 
         size_t size_n() const { return n; }
 
-        void run() {
+        void run() override {
             xpu::copy(buffDigis, xpu::host_to_device);
 
             xpu::copy(buffStartIndex, xpu::host_to_device);
@@ -93,7 +92,7 @@ namespace experimental {
 
         std::vector<float> timings() override { return xpu::get_timing<Kernel>(); }
 
-        size_t size() override { return n; }
+        size_t size() const { return n; }
 
         digi_t* output() override { return buffOutput.h(); }
 
@@ -119,7 +118,7 @@ namespace experimental {
             */
         }
 
-        size_t bytes() { return n * sizeof(digi_t); }
+        size_t bytes() const { return n * sizeof(digi_t); }
 
     };
 

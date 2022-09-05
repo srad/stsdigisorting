@@ -26,7 +26,7 @@ namespace experimental {
         return f.good();
     }
 
-    bool file_empty(const std::string fileName){
+    bool file_empty(const std::string fileName) {
         std::ifstream infile(fileName);
         return infile.peek() == std::ifstream::traits_type::eof();
     }
@@ -34,6 +34,14 @@ namespace experimental {
     std::string get_env(std::string const& key) {
         char const* val = std::getenv(key.c_str()); 
         return val == NULL ? std::string() : std::string(val);
+    }
+
+    std::string get_filename(const std::string path) {
+        std::string base_filename = path.substr(path.find_last_of("/") + 1);
+        std::string::size_type const p(base_filename.find_last_of('.'));
+        std::string file_without_extension = base_filename.substr(0, p);
+
+        return file_without_extension;
     }
 
     std::string get_device() { return experimental::get_env("XPU_DEVICE"); }

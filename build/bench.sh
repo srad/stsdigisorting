@@ -1,32 +1,55 @@
 #!/bin/bash
 
-BlockSortBlockDimX=64
-BlockSortItemsPerThread=8
-
 rm -fr plots/*
 mkdir -p plots
+rm benchmarks.sqlite
 
 #    BlockSortBlockDimX=$thread_count
-#    BlockSortItemsPerThread=$((2048 / JanSergeySortTPB))
+#    BlockSortItemsPerThread=$((2048 / JanSergeySortBlockDimX))
 
 for device in cuda0 hip0; do
+
+  # Handle different warp sizes.
+  if [ "$device" == "cuda0" ]; then
+    warp_size=32
+    warp_multiplier=$((1024 / warp_size))
+  elif [ "$device" == "hip0" ]; then
+    warp_size=64
+    warp_multiplier=$((1024 / 64))
+  fi
+
   # TODO: replace these static numbers by warp size increments, for device (32 nvidia, 64 amd)
   # but that will take the benchmark forever.
-  for thread_count in 128 256 512 1024; do
-    JanSergeySortTPB=$thread_count
+  for ((j=1;j<=warp_multiplier;j++)); do
+    echo
+    echo "=============================================================="
+    echo "($j/$warp_multiplier) Running benchmark with WarpMultiplier=$j"
+    echo "=============================================================="
+    echo
+    JanSergeySortBlockDimX=$thread_count
     BlockSortBlockDimX=64
     BlockSortItemsPerThread=8
 
-    echo "
-    #pragma once
+    echo "#pragma once
 
-    namespace experimental {
-        constexpr int channelCount = 2048;
-        constexpr int JanSergeySortTPB = $JanSergeySortTPB;
-        constexpr int BlockSortBlockDimX = $BlockSortBlockDimX;
-        constexpr int BlockSortItemsPerThread = $BlockSortItemsPerThread;
-    }
-    " > ../constants.h
+namespace experimental {
+    constexpr int channelCount = 2048;
+
+    constexpr int WarpMultiplier = $j;
+
+#if XPU_IS_CUDA
+    constexpr int WarpSize = 32;
+#else
+    constexpr int WarpSize = 64;
+#endif
+
+    constexpr int JanSergeySortBlockDimX = $warp_size * WarpMultiplier;
+    constexpr int BlockSortBlockDimX = 64;
+    constexpr int BlockSortItemsPerThread = 8;
+
+    //static_assert((JanSergeySortBlockDimX % WarpSize) == 0, "Block dim X is not multiple of the warp size");
+    //static_assert((BlockSortBlockDimX % WarpSize) == 0, "Block dim X is not multiple of the warp size");
+}" > ../constants.h
 
     if make -j64 ; then
       echo "Compiled."

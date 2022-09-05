@@ -9,7 +9,7 @@
 namespace experimental {
 
     constexpr count_t channelRange = channelCount / 2;
-    constexpr count_t itemsPerBlock = channelRange / JanSergeySortTPB;
+    constexpr count_t itemsPerBlock = channelRange / JanSergeySortBlockDimX;
 
     static_assert(channelRange > 0, "JanSergeySort: channelRange is not positive");
     static_assert(itemsPerBlock > 0, "JanSergeySort: itemsPerBlock is not positive");
@@ -19,4 +19,4 @@ namespace experimental {
 
 }
 
-XPU_BLOCK_SIZE_1D(experimental::JanSergeySort,  experimental::JanSergeySortTPB);
+XPU_BLOCK_SIZE_1D(experimental::JanSergeySort,  experimental::JanSergeySortBlockDimX);

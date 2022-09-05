@@ -13,4 +13,4 @@ namespace experimental {
 
 }
 
-XPU_BLOCK_SIZE_1D(experimental::JanSergeySortSingleBlock, experimental::JanSergeySortTPB);
+XPU_BLOCK_SIZE_1D(experimental::JanSergeySortSingleBlock, experimental::JanSergeySortBlockDimX);

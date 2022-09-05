@@ -5,12 +5,14 @@
 #include "../device.h"
 #include "../constants.h"
 
-// Initialize the xpu image. This macro must be placed once somewhere in the device sources.
 XPU_IMAGE(experimental::BlockSortKernel);
 
 namespace experimental {
+    // ----------------------------------------------------------------------------------------------------
     // <Bock size=thread per block (hier zumindest), items per thread>
     // Items per thread nochmal, 
+    // Params are equivalent to: https://nvlabs.github.io/cub/classcub_1_1_block_radix_sort.html
+    // ----------------------------------------------------------------------------------------------------
     using SortT = xpu::block_sort<unsigned long int, digi_t, BlockSortBlockDimX, BlockSortItemsPerThread>;
 
     struct GpuSortSmem {

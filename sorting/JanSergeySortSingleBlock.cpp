@@ -9,17 +9,17 @@ XPU_IMAGE(experimental::JanSergeySortSingleBlockKernel);
 namespace experimental {
 
     constexpr unsigned int channelRange = channelCount;
-    constexpr unsigned int itemsPerBlock = channelRange / JanSergeySortTPB;
+    constexpr unsigned int itemsPerBlock = channelRange / JanSergeySortBlockDimX;
 
     static_assert(channelRange > 0, "JanSergeySortSingleBlockKernel: channelRange is not positive");
     static_assert(itemsPerBlock > 0, "JanSergeySortSingleBlockKernel: itemsPerBlock is not positive");
 
-    using block_scan_t = xpu::block_scan<count_t, JanSergeySortTPB>;
+    using block_scan_t = xpu::block_scan<count_t, JanSergeySortBlockDimX>;
 
     struct JanSergeySortSingleBlockSmem {
         count_t channelOffset[channelRange];
         // Each thread must know how many threads came to before it.
-        // unsigned short channelCountPerItemBlock[JanSergeySortTPB][channelRange];
+        // unsigned short channelCountPerItemBlock[JanSergeySortBlockDimX][channelRange];
         block_scan_t::storage_t temp;
     };
 

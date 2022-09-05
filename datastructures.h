@@ -19,7 +19,6 @@ namespace experimental {
     // front_end_index = number of digis in bucket with channel < 1024.
     using channel_side_counter_t = std::unordered_map<address_t, std::array<count_t, 2>>;
 
-
     // The debug version carries the address, so the sorting result (in buckets) can be better debugged.
 #ifdef DEBUG_SORT
     struct CbmStsDigi {
@@ -39,6 +38,7 @@ namespace experimental {
         int channel;
         int time;
 
+        // Ignores address
         CbmStsDigi(int in_address, int in_channel, int in_time) : channel(in_channel), time(in_time) {}
         CbmStsDigi() = default;
         ~CbmStsDigi() = default;

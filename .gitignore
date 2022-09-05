@@ -8,6 +8,8 @@ build/**
 !build/bench.sh
 !build/csanitze.sh
 !build/plot.py
+lib
+!lib/*.sh
 
 *~
 *.a

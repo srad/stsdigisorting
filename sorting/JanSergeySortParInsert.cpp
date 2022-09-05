@@ -9,7 +9,7 @@ XPU_IMAGE(experimental::JanSergeySortParInsertKernel);
 namespace experimental {
 
     constexpr unsigned int channelRange = channelCount;
-    constexpr unsigned int itemsPerBlock = channelRange / JanSergeySortTPB;
+    constexpr unsigned int itemsPerBlock = channelRange / JanSergeySortBlockDimX;
 
     struct JanSergeySortParInsertSmem {
         count_t channelOffset[channelRange];
