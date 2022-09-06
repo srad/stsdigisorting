@@ -8,7 +8,6 @@ rm benchmarks.sqlite
 #    BlockSortItemsPerThread=$((2048 / JanSergeySortBlockDimX))
 
 for device in cuda0 hip0; do
-
   # Handle different warp sizes.
   if [ "$device" == "cuda0" ]; then
     warp_size=32
