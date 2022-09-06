@@ -11,7 +11,7 @@ namespace experimental {
     constexpr int WarpSize = 64;
 #endif
 
-    constexpr int JanSergeySortBlockDimX = 64 * WarpMultiplier;
+    constexpr int JanSergeySortBlockDimX = WarpSize * WarpMultiplier;
     constexpr int BlockSortBlockDimX = 64;
     constexpr int BlockSortItemsPerThread = 8;
 

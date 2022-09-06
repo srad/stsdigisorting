@@ -1,18 +1,25 @@
 #include <xpu/device.h>
-#include "JanSergeySortSimpleSum.h"
+#include "JanSergeySortSimple.h"
 #include "../datastructures.h"
 #include "../common.h"
 #include "../device.h"
 
-XPU_IMAGE(experimental::JanSergeySortSimpleSumKernel);
+/*******************************************************************************
+ * This kernel is called "simple" because it runs only one thread-block per
+ * bucket and uses a simple loop single-threaded to calculate the exclusive sum.
+ * 
+ * Used to compare performance.
+ ******************************************************************************/
+
+XPU_IMAGE(experimental::JanSergeySortSimpleKernel);
 
 namespace experimental {
 
-    struct JanSergeySortSimpleSumSmem {
+    struct JanSergeySortSimpleSmem {
         count_t channelOffset[channelCount];
     };
 
-    XPU_KERNEL(JanSergeySortSimpleSum, JanSergeySortSimpleSumSmem, const size_t n, const digi_t* digis, const index_t* startIndex, const index_t* endIndex, digi_t* output, const index_t* channelSplitIndex) {
+    XPU_KERNEL(JanSergeySortSimple, JanSergeySortSimpleSmem, const size_t n, const digi_t* digis, const index_t* startIndex, const index_t* endIndex, digi_t* output, const index_t* channelSplitIndex) {
         const index_t bucketIdx = xpu::block_idx::x();
         const index_t bucketStartIdx = startIndex[bucketIdx];
         const index_t bucketEndIdx = endIndex[bucketIdx];

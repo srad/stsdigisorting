@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../datastructures.h"
-#include "../common.h"
+#include "../src/datastructures.h"
+#include "../src/common.h"
 
 #include <algorithm>
 #include <iomanip>

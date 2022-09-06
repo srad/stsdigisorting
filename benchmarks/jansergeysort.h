@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../types.h"
-#include "../datastructures.h"
+#include "../src/types.h"
+#include "../src/datastructures.h"
 
 // Include host functions to control the GPU.
 #include <xpu/host.h>
@@ -95,28 +95,6 @@ namespace experimental {
         size_t size() const { return n; }
 
         digi_t* output() override { return buffOutput.h(); }
-
-        void write() override {
-            benchmark::write();
-            
-            // +------------------------------------------------------------------------------+
-            // |                               Bucket data                                    |
-            // +------------------------------------------------------------------------------+
-            /*
-            std::ofstream bucketOutput;
-            bucketOutput.open("jan_sergey_bucket.csv", std::ios::out | std::ios::trunc);
-            bucketOutput << "bucket,index,address,channel,time\n";
-
-            for(int i=0; i < bucket->size(); i++) {
-                const auto start = bucket->startIndex[i];
-                const auto end   = bucket->endIndex[i];
-                for(int j=start; j <= end; j++) {
-                    bucketOutput << i << "," << j << "," << bucket->digis[j].address << "," << bucket->digis[j].channel << "," << bucket->digis[j].time  << "\n";
-                }
-            }
-            bucketOutput.close();
-            */
-        }
 
         size_t bytes() const { return n * sizeof(digi_t); }
 

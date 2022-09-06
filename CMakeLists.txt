@@ -11,30 +11,30 @@ add_subdirectory(lib/sqlite_orm)
 #add_subdirectory(tests)
 add_subdirectory(lib/xpu)
 
-add_library(BlockSort SHARED sorting/BlockSort.cpp)
-xpu_attach(BlockSort sorting/BlockSort.cpp)
+add_library(BlockSort SHARED src/sorting/BlockSort.cpp)
+xpu_attach(BlockSort src/sorting/BlockSort.cpp)
 
-add_library(JanSergeySort SHARED sorting/JanSergeySort.cpp)
-xpu_attach(JanSergeySort sorting/JanSergeySort.cpp)
+add_library(JanSergeySort SHARED src/sorting/JanSergeySort.cpp)
+xpu_attach(JanSergeySort src/sorting/JanSergeySort.cpp)
 
-add_library(JanSergeySortSingleBlock SHARED sorting/JanSergeySortSingleBlock.cpp)
-xpu_attach(JanSergeySortSingleBlock sorting/JanSergeySortSingleBlock.cpp)
+add_library(JanSergeySortSingleBlock SHARED src/sorting/JanSergeySortSingleBlock.cpp)
+xpu_attach(JanSergeySortSingleBlock src/sorting/JanSergeySortSingleBlock.cpp)
 
-add_library(JanSergeySortSimpleSum SHARED sorting/JanSergeySortSimpleSum.cpp)
-xpu_attach(JanSergeySortSimpleSum sorting/JanSergeySortSimpleSum.cpp)
+add_library(JanSergeySortSimple SHARED src/sorting/JanSergeySortSimple.cpp)
+xpu_attach(JanSergeySortSimple src/sorting/JanSergeySortSimple.cpp)
 
 
-add_library(JanSergeySortParInsert SHARED sorting/JanSergeySortParInsert.cpp)
-xpu_attach(JanSergeySortParInsert sorting/JanSergeySortParInsert.cpp)
+add_library(JanSergeySortParInsert SHARED src/sorting/JanSergeySortParInsert.cpp)
+xpu_attach(JanSergeySortParInsert src/sorting/JanSergeySortParInsert.cpp)
 
 # add the executable
-add_executable(stsdigisort main.cpp)
+add_executable(stsdigisort src/main.cpp)
 target_link_libraries(stsdigisort
     Threads::Threads
     xpu
     BlockSort
     JanSergeySort
-    JanSergeySortSimpleSum
+    JanSergeySortSimple
     JanSergeySortSingleBlock
     JanSergeySortParInsert
     sqlite_orm::sqlite_orm

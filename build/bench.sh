@@ -48,7 +48,7 @@ namespace experimental {
 
     //static_assert((JanSergeySortBlockDimX % WarpSize) == 0, "Block dim X is not multiple of the warp size");
     //static_assert((BlockSortBlockDimX % WarpSize) == 0, "Block dim X is not multiple of the warp size");
-}" > ../constants.h
+}" > ../src/constants.h
 
     if make -j64 ; then
       echo "Compiled."
@@ -75,10 +75,10 @@ namespace experimental {
       echo
       echo $i
       XPU_DEVICE=$DEVICE LD_LIBRARY_PATH=.:lib/xpu ./stsdigisort -i ../data/digis_2022-08-23_15-02-03_ev500_auau_12gev_mbias_1_5_0.csv -r "$r" -b plots/$folder
-      sleep 3s
+      #sleep 3s
       r=$((r + inc))
       # digis_2022-08-23_13-05-03_ev200_auau_25gev_centr_1_1_0.csv
-      XPU_DEVICE=$DEVICE FILENAME_RESULTS="$full_path/benchmark_results.csv" FILENAME_TP="$full_path/benchmark_tp.csv" python plot.py $runtime_file $speedup_file $speedup_percent_file $throughput_file
+      #XPU_DEVICE=$DEVICE FILENAME_RESULTS="$full_path/benchmark_results.csv" FILENAME_TP="$full_path/benchmark_tp.csv" python plot.py $runtime_file $speedup_file $speedup_percent_file $throughput_file
     done
   done
 done

@@ -11,3 +11,5 @@ namespace experimental {
     XPU_EXPORT_KERNEL(BlockSortKernel, BlockSort, digi_t*, const index_t*, const index_t*, digi_t*, digi_t**, const size_t);
 
 }
+
+// ...XPU_BLOCK_SIZE_1D(experimental::JanSergeySort,  experimental::JanSergeySortBlockDimX);

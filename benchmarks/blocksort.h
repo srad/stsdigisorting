@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../types.h"
-#include "../datastructures.h"
-#include "../constants.h"
+#include "../src/types.h"
+#include "../src/datastructures.h"
+#include "../src/constants.h"
 
 // Include host functions to control the GPU.
 #include <xpu/host.h>
