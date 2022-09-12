@@ -19,8 +19,9 @@ namespace experimental {
     // front_end_index = number of digis in bucket with channel < 1024.
     using channel_side_counter_t = std::unordered_map<address_t, std::array<count_t, 2>>;
 
-    // The debug version carries the address, so the sorting result (in buckets) can be better debugged.
 #ifdef DEBUG_SORT
+    // This debug version is NOT suited for benchmarking, since the CbmStsDigi should be 8 bytes. 
+    // The debug version carries the address, so the sorted result (in buckets) can be properly debugged.
     struct CbmStsDigi {
         int address;
         int channel;
@@ -34,6 +35,8 @@ namespace experimental {
         static std::string csv_headers() { return "address,channel,time"; }
     };
 #else
+    // Must be 8 byte for throughput bechmark.
+    // Either: int channel, int time. Or: short channel, short charge, int time
     struct CbmStsDigi {
         int channel;
         int time;
@@ -57,14 +60,15 @@ namespace experimental {
         int half_ladder;
         int module;
         int sensor;
-        int side; // aufteilung in doppelte blockzahl und vorder/rückseite getrennt bearbeiten
-        // alle channels >= 1024 sind die rückseite. -> blocks verdoppeln
+        int side;
+
+        // Channel >= 1024 -> backside
         int channel;
         int time;
 
         CbmStsDigiInput() = default;
 
-        CbmStsDigiInput(int in_address, int in_system, int in_unit, int in_ladder, int in_half_ladder, int in_module, int in_sensor, int in_side, int in_channel, int in_time) : address(in_address), system(in_system), unit(in_unit), ladder(in_ladder), half_ladder(in_half_ladder), module(in_module), sensor(in_sensor), side(in_side), channel(in_channel), time(in_time) {}
+        CbmStsDigiInput(const int in_address, const int in_system, const int in_unit, const int in_ladder, const int in_half_ladder, const int in_module, const int in_sensor, const int in_side, const int in_channel, const int in_time) : address(in_address), system(in_system), unit(in_unit), ladder(in_ladder), half_ladder(in_half_ladder), module(in_module), sensor(in_sensor), side(in_side), channel(in_channel), time(in_time) {}
 
         std::string to_string() { return "(address: " + to_zero_lead(address, 10) + ", channel: " + to_zero_lead(channel, 4) + ", time: " + to_zero_lead(time, 5) + ")"; }
 
@@ -86,8 +90,8 @@ namespace experimental {
         address_counter_t addressCounter;
         channel_side_counter_t channelSideCounter;
 
-        const unsigned int front = 0;
-        const unsigned int back = 1;
+        const static unsigned int front = 0;
+        const static unsigned int back = 1;
 
         // Doppelte bucket anzahl, vor/rückseite
 
@@ -150,12 +154,12 @@ namespace experimental {
 
     private:
         /// <summary>
-        /// Takes O(n) = 2*O(n) + 2*O(addressCount)
+        /// Running time: O(n) = 2*O(n) + 2*O(addressCount) = O(n) + O(1) = O(n)
         /// </summary>
         void createBuckets() {
-
             // -----------------------------------------------------------------------------------
-            // 1. Init to zero and count addresses.
+            // 1. Init to zero and count all addresses. This will determine the output layout.
+            //    Each address bucket's size in the flat array is determined by each address count.
             // -----------------------------------------------------------------------------------
             for (int i = 0; i < n_; i++) {                
                 // Init map entries.
@@ -177,7 +181,7 @@ namespace experimental {
             }
             
             // -----------------------------------------------------------------------------------
-            // 2. Excluside sum sum per address. O(addressOrder.size()) -> small.
+            // 2. Excluside sum per address. O(addressOrder.size()) -> small.
             // -----------------------------------------------------------------------------------
             int sum = 0;
             // The address of the first element is = 0.
@@ -213,6 +217,8 @@ namespace experimental {
             // Copy elements to the right location
             // -----------------------------------------------------------------------------------
             for (int i = 0; i < n_; i++) {
+                // All digis on the back-side (>= 1024) are offset by the number of front-side digis in the bucket (<= 1023).
+                // If the DEBUG_SORT symbol is not defined, the address in the CbmStsDigi constructor is ignored and not part of the type.
                 digis[addressStartIndex[input[i].address] + (channelSideCounter[input[i].address][(input[i].channel >= 1024)]++)] = CbmStsDigi(input[i].address, input[i].channel, input[i].time);
             }
         }

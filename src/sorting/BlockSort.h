@@ -12,4 +12,4 @@ namespace experimental {
 
 }
 
-// ...XPU_BLOCK_SIZE_1D(experimental::JanSergeySort,  experimental::JanSergeySortBlockDimX);
+XPU_BLOCK_SIZE_1D(unsigned int, experimental::BlockSortBlockDimX);
