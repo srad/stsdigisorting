@@ -127,3 +127,4 @@ Source/cmCommands.cxx
 Tests/FindPackageModeMakefileTest/cmakeExecutable.mk
 Tests/X11/HelloWorldX11
 Tests/X11/UseX11
+size.sh

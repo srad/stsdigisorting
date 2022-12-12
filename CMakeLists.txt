@@ -11,6 +11,9 @@ add_subdirectory(lib/sqlite_orm)
 #add_subdirectory(tests)
 add_subdirectory(lib/xpu)
 
+add_library(AddressBuckets SHARED src/sorting/AddressBuckets.cpp)
+xpu_attach(AddressBuckets src/sorting/AddressBuckets.cpp)
+
 add_library(BlockSort SHARED src/sorting/BlockSort.cpp)
 xpu_attach(BlockSort src/sorting/BlockSort.cpp)
 
@@ -23,7 +26,6 @@ xpu_attach(JanSergeySortSingleBlock src/sorting/JanSergeySortSingleBlock.cpp)
 add_library(JanSergeySortSimple SHARED src/sorting/JanSergeySortSimple.cpp)
 xpu_attach(JanSergeySortSimple src/sorting/JanSergeySortSimple.cpp)
 
-
 add_library(JanSergeySortParInsert SHARED src/sorting/JanSergeySortParInsert.cpp)
 xpu_attach(JanSergeySortParInsert src/sorting/JanSergeySortParInsert.cpp)
 
@@ -32,6 +34,7 @@ add_executable(stsdigisort src/main.cpp)
 target_link_libraries(stsdigisort
     Threads::Threads
     xpu
+    AddressBuckets
     BlockSort
     JanSergeySort
     JanSergeySortSimple

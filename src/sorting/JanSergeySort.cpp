@@ -29,19 +29,24 @@ namespace experimental {
         // +---------+------------+---------+------------+---------+------------+
         // | Front   | Back       |  Front  | Back       | Front   | Back       |
         // +---------+------------+---------+------------+---------+------------+
+        //     |           |           |          |           |          |
+        //     v           v           v          v           v          v            Parallel writes to output
+        // +---------+------------+---------+------------+---------+------------+
+        // |         |            |         |            |         |            |     Sorted blocks
+        // +---------+------------+---------+------------+---------+------------+
 
         // Two blocks handle one bucket.
         // 0, 0, 1, 1, 2, 2, ...
-        const uint_t bucketIdx = xpu::block_idx::x() / 2;
+        const index_t bucketIdx = xpu::block_idx::x() / 2;
 
         // Block side: 0, 1, 0, 1, ...
         const bool isFront = (xpu::block_idx::x() % 2) == 0;
         const bool isBack = (xpu::block_idx::x() % 2) == 1;
 
-        // Multiply instead of "if".
-        const uint_t bucketStartIdx = (isFront * startIndex[bucketIdx]) + (isBack * channelSplitIndex[bucketIdx]);
-        const uint_t bucketEndIdx = (isFront * (channelSplitIndex[bucketIdx] - 1)) + (isBack * endIndex[bucketIdx]);
-        const uint_t threadStart = bucketStartIdx + xpu::thread_idx::x();
+        // Branch free index computation.
+        const index_t bucketStartIdx = (isFront * startIndex[bucketIdx]) + (isBack * channelSplitIndex[bucketIdx]);
+        const index_t bucketEndIdx = (isFront * (channelSplitIndex[bucketIdx] - 1)) + (isBack * endIndex[bucketIdx]);
+        const index_t threadStart = bucketStartIdx + xpu::thread_idx::x();
 
         // -----------------------------------------------------------------------------------------------------------
         // 1. Init all channel counters to zero: O(channelCount)
@@ -67,8 +72,6 @@ namespace experimental {
         block_scan_t scan{smem.temp};
 
         const uint_t channelStartIndex = xpu::thread_idx::x() * itemsPerBlock;
-
-        // replace copy for and back by: reinterpret_cast<count_t(&)[itemsPerBlock]>(smem.channelOffset + channelStartIndex);
         auto channelOffsetSection = reinterpret_cast<count_t(*)[itemsPerBlock]>(smem.channelOffset + channelStartIndex);
         //uint_t items[itemsPerBlock];
         //for(int i=0; i < itemsPerBlock; i++) {
@@ -85,7 +88,6 @@ namespace experimental {
         //}
         //xpu::barrier();
 
-        // para
         if (xpu::thread_idx::x() == 0) {   
             for (int i = bucketStartIdx; i <= bucketEndIdx; i++) {
                 output[bucketStartIdx + (smem.channelOffset[digis[i].channel % 1024]++)] = digis[i];

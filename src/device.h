@@ -5,9 +5,112 @@
 
 namespace experimental {
 
-    //template<typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value, T>::type>
-    //XPU_D void exclusive_sum(T* ns, ) {
-    //}
+    /*
+
+    // -------------------------------------------------------------------
+    // CbmStsAddress.cxx
+    // -------------------------------------------------------------------
+
+    enum EStsElementLevel {
+        kStsSystem,
+        kStsUnit,
+        kStsLadder,
+        kStsHalfLadder,
+        kStsModule,
+        kStsSensor,
+        kStsSide,
+        kStsNofLevels
+    };
+
+    const int32_t kVersionSize  = 4;   // Bits for version number
+    const int32_t kVersionShift = 28;  // First bit for version number
+    const int32_t kVersionMask  = (1 << kVersionSize) - 1;
+
+    const uint32_t kCurrentVersion = 1;
+
+  // clang-format off
+  // -----    Definition of address bit field   ------------------------------
+  const uint16_t kBits[kCurrentVersion + 1][kStsNofLevels] = {
+    // Version 0 (until 23 August 2017)
+    {
+      4,  // system
+      4,  // unit / station
+      4,  // ladder
+      1,  // half-ladder
+      3,  // module
+      2,  // sensor
+      1   // side
+    },
+
+    // Version 1 (current, since 23 August 2017)
+    {
+      4,  // system
+      6,  // unit
+      5,  // ladder
+      1,  // half-ladder
+      5,  // module
+      4,  // sensor
+      1   // side
+    }
+
+  };
+  // -------------------------------------------------------------------------
+
+    // -----    Bit shifts -----------------------------------------------------
+    const int32_t kShift[kCurrentVersion + 1][kStsNofLevels] = {
+        {0, kShift[0][0] + kBits[0][0], kShift[0][1] + kBits[0][1], kShift[0][2] + kBits[0][2], kShift[0][3] + kBits[0][3],
+        kShift[0][4] + kBits[0][4], kShift[0][5] + kBits[0][5]},
+
+        {0, kShift[1][0] + kBits[1][0], kShift[1][1] + kBits[1][1], kShift[1][2] + kBits[1][2], kShift[1][3] + kBits[1][3],
+        kShift[1][4] + kBits[1][4], kShift[1][5] + kBits[1][5]}};
+    // -------------------------------------------------------------------------
+
+
+    // -----    Bit masks  -----------------------------------------------------
+    const int32_t kMask[kCurrentVersion + 1][kStsNofLevels] = {
+        {(1 << kBits[0][0]) - 1, (1 << kBits[0][1]) - 1, (1 << kBits[0][2]) - 1, (1 << kBits[0][3]) - 1,
+        (1 << kBits[0][4]) - 1, (1 << kBits[0][5]) - 1, (1 << kBits[0][6]) - 1},
+
+        {(1 << kBits[1][0]) - 1, (1 << kBits[1][1]) - 1, (1 << kBits[1][2]) - 1, (1 << kBits[1][3]) - 1,
+        (1 << kBits[1][4]) - 1, (1 << kBits[1][5]) - 1, (1 << kBits[1][6]) - 1}};
+    // -------------------------------------------------------------------------
+
+    uint32_t GetVersion(const int32_t address) {
+        return uint32_t((address & (kVersionMask << kVersionShift)) >> kVersionShift);
+    }
+
+    uint32_t GetElementId(const int32_t address, const EStsElementLevel level) {
+        uint32_t version = GetVersion(address);
+        return (address & (kMask[version][level] << kShift[version][level])) >> kShift[version][level];
+    }
+
+    //   ss << "StsAddress: address " << address << " (version " << GetVersion(address) << ")"
+    //      << ": system " << GetElementId(address, kStsSystem) << ", unit " << GetElementId(address, kStsUnit) << ", ladder "
+    //      << GetElementId(address, kStsLadder) << ", half-ladder " << GetElementId(address, kStsHalfLadder) << ", module "
+    //      << GetElementId(address, kStsModule) << ", sensor " << GetElementId(address, kStsSensor) << ", side "
+    //      << GetElementId(address, kStsSide);
+
+    // -------------------------------------------------------------------
+    // end CBM source
+    // -------------------------------------------------------------------
+
+    XPU_D void group_by_address(CbmStsDigiInput* digis, const unsigned int n) {
+        // 64+32+2+32+16+2=148
+        constexpr unsigned int addressSpace = 64 + 32 + 2 + 32 + 16 + 2;
+        unsigned int map[addressSpace];
+
+        for (int i = xpu::thread_idx::x(); i < n; i += xpu::block_dim::x()) {
+            //smem.channelOffset[i] = 0;
+            const auto unit = GetElementId(digis[i].address, EStsElementLevel::kStsUnit);
+            const auto ladder = GetElementId(digis[i].address, EStsElementLevel::kStsLadder);
+            const auto hLadder = GetElementId(digis[i].address, EStsElementLevel::kStsHalfLadder);
+            const auto module = GetElementId(digis[i].address, EStsElementLevel::kStsModule);
+            const auto sensor = GetElementId(digis[i].address, EStsElementLevel::kStsSensor);
+            const auto side = GetElementId(digis[i].address, EStsElementLevel::kStsSide);
+        }
+        xpu::barrier();
+    } 
+    */
 
     template<typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value, T>::type>
     XPU_D void prescan(T* data, T* temp) {

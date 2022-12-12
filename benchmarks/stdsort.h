@@ -62,7 +62,7 @@ namespace experimental {
         void run() override {
             // Copy for each run a fresh output original digi array.
             for (int i=0; i < n; i++) {
-                output_[i] = digi_t(digis[i].address, digis[i].channel, digis[i].time);
+                output_[i] = digi_t(digis[i].address, digis[i].channel, digis[i].time, digis[i].charge);
             }
 
             // Create a fresh copy, in-place sorting.

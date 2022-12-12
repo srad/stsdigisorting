@@ -74,9 +74,9 @@ int main(int argc, char** argv) {
 
         if (xpu::active_driver() != xpu::cpu) {
             std::cout << "Using GPU.\n\n";
-            runner.add(new experimental::jansergeysort_bench<experimental::JanSergeySort>(aDigis, n, writeOutput, checkResult));
+            //runner.add(new experimental::jansergeysort_bench<experimental::JanSergeySort>(aDigis, n, writeOutput, checkResult));
             runner.add(new experimental::jansergeysort_bench<experimental::JanSergeySortSingleBlock>(aDigis, n, writeOutput, checkResult, 1));
-            runner.add(new experimental::jansergeysort_bench<experimental::JanSergeySortSimple>(aDigis, n, writeOutput, checkResult, 1));
+            //runner.add(new experimental::jansergeysort_bench<experimental::JanSergeySortSimple>(aDigis, n, writeOutput, checkResult, 1));
             //runner.add(new experimental::jansergeysort_bench<experimental::JanSergeySortParInsert>(aDigis, n, writeOutput, checkResult));
             // const CbmStsDigiInput* in_digis, const size_t in_n, const bool in_write = false, const bool in_check = true, unsigned int in_block_per_bucket = 2
         } else {

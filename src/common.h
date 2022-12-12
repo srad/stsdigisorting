@@ -81,9 +81,9 @@ namespace experimental {
             }
 
             // Artificial duplication of data for testing purposes.
-            // address,system,unit,ladder,half-ladder,module,sensor,side,channel,time
+            // address,system,unit,ladder,half-ladder,module,sensor,side,channel,time,charge
             for (int i = 0; i < repeat; i++) {
-                vDigis.push_back(CbmStsDigiInput(cols[0], cols[1], cols[2], cols[3], cols[4], cols[5], cols[6], cols[7], cols[8], cols[9]));
+                vDigis.push_back(CbmStsDigiInput(cols[0], cols[1], cols[2], cols[3], cols[4], cols[5], cols[6], cols[7], cols[8], cols[9], cols[10]));
 
                 cnt++;
                 if (n != 0 && cnt == n) {

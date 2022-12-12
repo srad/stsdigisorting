@@ -1,0 +1,5 @@
+#define once
+
+namespace cbm {
+
+}
