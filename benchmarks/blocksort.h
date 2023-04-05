@@ -51,6 +51,7 @@ namespace experimental {
             buffDigis = xpu::hd_buffer<digi_t>(n);
 
             bucket = new CbmStsDigiBucket(digis, n);
+
             std::cout << "BlockSort: Buckets created." << "\n";
 
             buffStartIndex = xpu::hd_buffer<index_t>(bucket->size());

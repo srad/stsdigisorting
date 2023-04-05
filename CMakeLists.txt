@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.11)
 project(StsDigiSort VERSION 1.0)
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 
 find_package(Threads REQUIRED)
 
@@ -11,11 +12,11 @@ add_subdirectory(lib/sqlite_orm)
 #add_subdirectory(tests)
 add_subdirectory(lib/xpu)
 
-add_library(AddressBuckets SHARED src/sorting/AddressBuckets.cpp)
-xpu_attach(AddressBuckets src/sorting/AddressBuckets.cpp)
-
 add_library(BlockSort SHARED src/sorting/BlockSort.cpp)
 xpu_attach(BlockSort src/sorting/BlockSort.cpp)
+
+add_library(Partition SHARED src/algo/Partition.cpp)
+xpu_attach(Partition src/algo/Partition.cpp)
 
 add_library(JanSergeySort SHARED src/sorting/JanSergeySort.cpp)
 xpu_attach(JanSergeySort src/sorting/JanSergeySort.cpp)
@@ -34,7 +35,6 @@ add_executable(stsdigisort src/main.cpp)
 target_link_libraries(stsdigisort
     Threads::Threads
     xpu
-    AddressBuckets
     BlockSort
     JanSergeySort
     JanSergeySortSimple

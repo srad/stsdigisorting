@@ -7,9 +7,12 @@
 #include <algorithm>
 #include <iomanip>
 #include <memory>
+#include <regex>
 #include <random>
 #include <string>
 #include <sstream>
+#include <algorithm>
+#include <cctype>
 #include <vector>
 #include <sqlite_orm/sqlite_orm.h>
 
@@ -61,6 +64,23 @@ namespace experimental {
 
         virtual std::vector<float> timings() { return timings_; }
 
+        virtual std::string filename() {
+            std::string name(info().name);
+
+            std::transform(name.begin(), name.end(), name.begin(), [](unsigned char c){ return std::tolower(c); });
+
+            std::replace_if(name.begin(), name.end(), [](auto ch) {
+                return !::isalnum(ch);
+            }, '_');
+
+            // Remove consecutive _ and leading+trailing _
+            name = std::regex_replace(name, std::regex("[_]{2,}"), "_");
+            name = std::regex_replace(name, std::regex("^_+"), "");
+            name = std::regex_replace(name, std::regex("_+$"), "");
+
+            return name;
+        }
+
         virtual void write() {
             create_dir("output");
             digi_t* sorted = output();
@@ -69,14 +89,17 @@ namespace experimental {
             // |                               Sorted output                                  |
             // +------------------------------------------------------------------------------+
             std::ofstream file;
-            file.open("output/" + info().name + ".csv", std::ios::out | std::ios::trunc);
-            file << "index," + digi_t::csv_headers()  + "\n";
+            file.open("output/" + filename() + ".csv", std::ios::out | std::ios::trunc);
+            // file << "index," + digi_t::csv_headers() + "\n";
+            file << digi_t::csv_headers() + "\n";
 
             for (int i = 0; i < size(); i++) {
-                file << i << "," << sorted[i].to_csv() << "\n";
+                // file << i << "," << sorted[i].to_csv() << "\n";
+                file << sorted[i].to_csv() << "\n";
             }
 
             file.close();
+            std::cout << "Wrote CSV file ...\n";
         }
 
         virtual void check() {
@@ -146,7 +169,11 @@ namespace experimental {
                                 );
         }
 
-        void run(int n) {
+        void run(unsigned int n) {
+            if (benchmarks.size() == 0) {
+                std::cout << "No benchmark to run\n";
+                return;
+            }
             auto storage = init_storage("benchmarks.sqlite");
             storage.sync_schema();
 
@@ -230,8 +257,11 @@ namespace experimental {
         const std::string input_file;
 
         void run_benchmark(benchmark* b, const int r) {
-            std::cout << "------------------------------------------------------------\nRunning benchmark '" << b->info().name << "'\n------------------------------------------------------------" << std::endl;
+            std::cout << "------------------------------------------------------------\n";
+            std::cout << "Running benchmark '" << b->info().name << "\n";
+            std::cout << "------------------------------------------------------------\n";
             b->setup();
+            std::cout << "Setup complete...\n";
 
             for (int i = 0; i < r + 1; i++) {
                 b->run();

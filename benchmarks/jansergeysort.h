@@ -17,6 +17,7 @@ namespace experimental {
 
         const size_t n;
         const unsigned int blocksPerBucket;
+        const std::string name;
 
         // Big difference here is that the digis are grouped in buckets and then bucket-wise sorted.
         bucket_t* bucket;
@@ -28,10 +29,8 @@ namespace experimental {
         xpu::hd_buffer<index_t> buffStartIndex;
         xpu::hd_buffer<index_t> buffEndIndex;
 
-        xpu::hd_buffer<index_t> channelSplitIndex;
-
     public:
-        jansergeysort_bench(const CbmStsDigiInput* in_digis, const size_t in_n, const bool in_write = false, const bool in_check = true, unsigned int in_block_per_bucket = 2) : n(in_n), digis(new CbmStsDigiInput[in_n]), blocksPerBucket(in_block_per_bucket), benchmark(in_write, in_check) {
+        jansergeysort_bench(const std::string in_name, const CbmStsDigiInput* in_digis, const size_t in_n, const bool in_write = false, const bool in_check = true, unsigned int in_block_per_bucket = 2) : n(in_n), digis(new CbmStsDigiInput[in_n]), name(in_name), blocksPerBucket(in_block_per_bucket), benchmark(in_write, in_check) {
             std::copy(in_digis, in_digis + in_n, digis);
             std::cout << "(" << info().name << ")" << " Block per bucket=" << blocksPerBucket << "\n";
         }
@@ -40,7 +39,7 @@ namespace experimental {
 
         BenchmarkInfo info() override {
             const auto kernel = std::string(xpu::get_name<Kernel>());
-            return BenchmarkInfo{kernel, JanSergeySortBlockDimX, 0};
+            return BenchmarkInfo{name, JanSergeySortBlockDimX, 0};
         }
 
         void setup() {
@@ -53,12 +52,8 @@ namespace experimental {
             buffStartIndex = xpu::hd_buffer<index_t>(bucket->size());
             buffEndIndex = xpu::hd_buffer<index_t>(bucket->size());
 
-            channelSplitIndex = xpu::hd_buffer<index_t>(bucket->size());
-
             std::copy(bucket->startIndex, bucket->startIndex + bucket->size(), buffStartIndex.h());
             std::copy(bucket->endIndex, bucket->endIndex + bucket->size(), buffEndIndex.h());
-
-            std::copy(bucket->channelSplitIndex, bucket->channelSplitIndex + bucket->size(), channelSplitIndex.h());
 
             std::copy(bucket->digis, bucket->digis + n, buffDigis.h());
         }
@@ -70,7 +65,6 @@ namespace experimental {
             buffEndIndex.reset();
             buffDigis.reset();
             buffOutput.reset();
-            channelSplitIndex.reset();
         }
 
         size_t size_n() const { return n; }
@@ -81,10 +75,8 @@ namespace experimental {
             xpu::copy(buffStartIndex, xpu::host_to_device);
             xpu::copy(buffEndIndex, xpu::host_to_device);
 
-            xpu::copy(channelSplitIndex, xpu::host_to_device);
-
             // For now, one block per bucket.
-            xpu::run_kernel<Kernel>(xpu::grid::n_blocks(bucket->size() * blocksPerBucket), n, buffDigis.d(), buffStartIndex.d(), buffEndIndex.d(), buffOutput.d(), channelSplitIndex.d());
+            xpu::run_kernel<Kernel>(xpu::grid::n_blocks(bucket->size() * blocksPerBucket), n, buffDigis.d(), buffStartIndex.d(), buffEndIndex.d(), buffOutput.d());
 
             // Copy result back to host.
             xpu::copy(buffOutput, xpu::device_to_host);
